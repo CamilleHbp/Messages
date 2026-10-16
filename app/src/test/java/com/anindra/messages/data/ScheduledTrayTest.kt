@@ -12,16 +12,18 @@ class ScheduledTrayTest {
         assertEquals(listOf(1L, 2L, 3L), ScheduledTray.messages(rows, 1).map { it.id })
     }
 
-    @Test fun overflowCountsOnlyMessagesBeyondTwoVisibleSlots() {
+    @Test fun overflowCountsEveryMessageAfterTheSingleVisibleSlot() {
         assertEquals(0, ScheduledTray.overflowCount(0))
         assertEquals(0, ScheduledTray.overflowCount(1))
-        assertEquals(0, ScheduledTray.overflowCount(2))
-        assertEquals(1, ScheduledTray.overflowCount(3))
-        assertEquals(98, ScheduledTray.overflowCount(100))
+        assertEquals(1, ScheduledTray.overflowCount(2))
+        assertEquals(2, ScheduledTray.overflowCount(3))
+        assertEquals(99, ScheduledTray.overflowCount(100))
     }
 
     @Test fun deletingFirstMessagePromotesNextScheduledMessage() {
         val rows = listOf(row(1, 100), row(2, 200), row(3, 300))
-        assertEquals(listOf(2L, 3L), ScheduledTray.messages(rows.drop(1), 1).take(2).map { it.id })
+        val remaining = ScheduledTray.messages(rows.drop(1), 1)
+        assertEquals(2L, remaining.first().id)
+        assertEquals(1, ScheduledTray.overflowCount(remaining.size))
     }
 }

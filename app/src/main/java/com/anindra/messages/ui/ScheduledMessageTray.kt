@@ -24,16 +24,14 @@ import com.anindra.messages.data.ScheduledTray
 internal fun ScheduledMessageTray(messages: List<ScheduledMessage>, onManage: (ScheduledMessage) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     if (messages.isEmpty()) return
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        messages.take(2).forEach { message ->
-            key(message.id) { ScheduledTrayRow(message, onManage = { onManage(message) }) }
-        }
-        val overflow = ScheduledTray.overflowCount(messages.size)
-        if (overflow > 0) {
-            TextButton(onClick = { expanded = true }, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.chat_scheduled_more, overflow))
-            }
-        }
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+        val message = messages.first()
+        ScheduledTrayRow(
+            message,
+            onManage = { onManage(message) },
+            overflowCount = ScheduledTray.overflowCount(messages.size),
+            onShowAll = { expanded = true }
+        )
     }
     if (expanded) {
         ScheduledTraySheet(messages, onManage, onDismiss = { expanded = false })
@@ -41,7 +39,12 @@ internal fun ScheduledMessageTray(messages: List<ScheduledMessage>, onManage: (S
 }
 
 @Composable
-internal fun ScheduledTrayRow(message: ScheduledMessage, onManage: () -> Unit) {
+internal fun ScheduledTrayRow(
+    message: ScheduledMessage,
+    onManage: () -> Unit,
+    overflowCount: Int = 0,
+    onShowAll: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -57,6 +60,12 @@ internal fun ScheduledTrayRow(message: ScheduledMessage, onManage: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = onManage, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Rounded.Schedule, stringResource(R.string.settings_scheduled_manage_title))
+            }
+            if (overflowCount > 0 && onShowAll != null) {
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onShowAll, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Text(stringResource(R.string.chat_scheduled_more, overflowCount))
+                }
             }
         }
     }
