@@ -5,5 +5,5 @@ internal object ScheduledTray {
         rows.filter { it.conversationId == conversationId }
             .sortedWith(compareBy<ScheduledMessage> { it.timestamp }.thenBy { it.id })
 
-    fun overflowCount(size: Int): Int = (size - 2).coerceAtLeast(0)
+    fun overflowCount(size: Int): Int = (size - 1).coerceAtLeast(0)
 }
