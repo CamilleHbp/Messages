@@ -49,7 +49,11 @@ class PendingMediaWiringTest {
         )
         assertTrue(
             "the send button must enable for an attachment with no text",
-            chat.contains("val canSend = draft.isNotBlank() || hasAttachments"),
+            chat.lineSequence()
+                .first { it.trimStart().startsWith("val canSend = ") }
+                .substringAfter("=")
+                .split("||")
+                .any { it.trim() == "hasAttachments" },
         )
     }
 
