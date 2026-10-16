@@ -91,4 +91,7 @@
     <string name="chat_search_next">下一個符合項</string>
     <string name="chat_search_counter">%1$d/%2$d</string>
     <string name="chat_scroll_to_latest">跳至最新訊息</string>
+    <string name="chat_scheduled_more">還有 %d 則</string>
+    <string name="chat_send_now">立即傳送</string>
+    <string name="chat_cancel_scheduled">取消排程訊息</string>
 </resources>

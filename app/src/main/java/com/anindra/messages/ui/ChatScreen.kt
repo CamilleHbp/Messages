@@ -637,14 +637,13 @@ fun ChatScreen(
         .collectAsState(initial = emptyList())
     val totalCount by remember(conversationId) { vm.messageCountFlow(conversationId) }.collectAsState(initial = 0)
 
-    // Scheduled rows live in their own table, so they are merged into the list
-    // by send time rather than read back as messages. A message that has not
-    // fired yet has no row at all, which is why this cannot come from `messages`.
-    val allScheduled by vm.scheduledMessages().collectAsState(initial = emptyList())
-    val chatRows = rememberChatRows(messages, allScheduled, conversationId)
-    // Row indices and message indices stop agreeing once pending rows are
-    // interleaved, so map each row to its position in `messages` (or -1). Without
-    // this a scheduled row above a message shifts every tail below it.
+    val allScheduled by remember(vm) { vm.scheduledMessages() }.collectAsState(initial = emptyList())
+    val scheduledHere = remember(allScheduled, conversationId) {
+        com.anindra.messages.data.ScheduledTray.messages(allScheduled, conversationId)
+    }
+    val chatRows = rememberChatRows(messages, emptyList(), conversationId)
+    var managedSchedule by remember(conversationId) { mutableStateOf<com.anindra.messages.data.ScheduledMessage?>(null) }
+    var editingSchedule by remember(conversationId) { mutableStateOf<com.anindra.messages.data.ScheduledMessage?>(null) }
     val sentIndexAt = rememberSentIndexAt(chatRows)
     val lastSentRow = remember(chatRows, sentIndexAt) { sentIndexAt.indexOfLast { it >= 0 } }
     // In-chat search (from the overflow menu): matches this conversation only.
@@ -1326,6 +1325,9 @@ fun ChatScreen(
                     .background(MaterialTheme.colorScheme.background)
                     .navigationBarsPadding()
             ) {
+                if (!selectionActive) {
+                    ScheduledMessageTray(scheduledHere, onManage = { managedSchedule = it })
+                }
                 AnimatedVisibility(
                     visible = showEmoji && !selectionActive,
                     enter = if (reduceMotion) fadeIn(tween(0))
@@ -1462,14 +1464,6 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 itemsIndexed(chatRows, key = { _, row -> row.key }) { idx, row ->
-                    if (row is ChatRow.Pending) {
-                        ScheduledBubble(
-                            scheduled = row.scheduled,
-                            onCancel = { vm.cancelScheduledMessage(row.scheduled.id) },
-                            showSimIndicator = vm.settings.showSimIndicator
-                        )
-                        return@itemsIndexed
-                    }
                     val msg = (row as ChatRow.Sent).message
                     val prevRow = chatRows.getOrNull(idx - 1)
                     val prev = (prevRow as? ChatRow.Sent)?.message
@@ -1607,6 +1601,33 @@ fun ChatScreen(
             }
 
         }
+    }
+
+    managedSchedule?.let { message ->
+        ScheduledMessageActions(
+            message = message,
+            onReschedule = { managedSchedule = null; editingSchedule = message },
+            onSendNow = {
+                managedSchedule = null
+                vm.sendScheduledMessageNow(message.id) { ok ->
+                    if (!ok) Toast.makeText(context, context.getString(R.string.message_status_failed), Toast.LENGTH_SHORT).show()
+                }
+            },
+            onCancel = { managedSchedule = null; vm.cancelScheduledMessage(message.id) },
+            onDismiss = { managedSchedule = null }
+        )
+    }
+    editingSchedule?.let { message ->
+        ReschedulePicker(
+            timestamp = message.timestamp,
+            onDone = { timestamp ->
+                vm.rescheduleMessage(message.id, timestamp) { ok ->
+                    if (ok) editingSchedule = null
+                    else Toast.makeText(context, context.getString(R.string.chat_schedule_failed), Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { editingSchedule = null }
+        )
     }
 
     if (attachSheet) {

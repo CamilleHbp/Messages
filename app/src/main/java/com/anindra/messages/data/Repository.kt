@@ -2077,7 +2077,14 @@ class Repository(private val context: Context) {
         out
     }
 
-    fun addScheduledMessage(address: String, body: String, timestamp: Long, conversationId: Long, subId: Int): Long {
+    fun addScheduledMessage(
+        address: String,
+        body: String,
+        timestamp: Long,
+        conversationId: Long,
+        subId: Int,
+        armAlarm: (Long) -> Unit = {}
+    ): Long {
         require(address.isNotBlank()) { "Address must not be blank" }
         require(body.isNotBlank()) { "Message body must not be blank" }
         require(body.length <= 1600) { "Message body exceeds 1600 characters" }
@@ -2089,7 +2096,16 @@ class Repository(private val context: Context) {
             put("conversation_id", conversationId)
             put("sub_id", subId)
         }
-        val id = db.writableDatabase.insertOrThrow("scheduled_messages", null, cv)
+        val database = db.writableDatabase
+        database.beginTransaction()
+        val id = try {
+            val inserted = database.insertOrThrow("scheduled_messages", null, cv)
+            armAlarm(inserted)
+            database.setTransactionSuccessful()
+            inserted
+        } finally {
+            database.endTransaction()
+        }
         notifyChanged()
         return id
     }
@@ -2100,6 +2116,10 @@ class Repository(private val context: Context) {
     }
 
     suspend fun scheduledMessageById(id: Long): ScheduledMessage? = runOnIoAsync {
+        scheduledMessageByIdBlocking(id)
+    }
+
+    private fun scheduledMessageByIdBlocking(id: Long): ScheduledMessage? =
         db.readableDatabase.rawQuery(
             "SELECT id,address,body,timestamp,conversation_id,sub_id FROM scheduled_messages WHERE id=?",
             arrayOf(id.toString())
@@ -2114,17 +2134,54 @@ class Repository(private val context: Context) {
                 subId = c.getInt(5)
             )
         }
+
+    suspend fun claimScheduledMessage(
+        id: Long,
+        dueAt: Long? = null
+    ): Pair<ScheduledMessage, Message>? = runOnIoAsync {
+        val database = db.writableDatabase
+        // Claim and create the outgoing row together: alarm delivery and Send now
+        // must never hand the same scheduled message to the radio twice.
+        database.beginTransaction()
+        val claimed = try {
+            val row = scheduledMessageByIdBlocking(id) ?: return@runOnIoAsync null
+            if (dueAt != null && row.timestamp > dueAt) return@runOnIoAsync null
+            val stored = sendText(row.conversationId, row.body, row.subId)
+                ?: error("Could not store scheduled message $id")
+            check(database.delete("scheduled_messages", "id=?", arrayOf(id.toString())) == 1)
+            database.setTransactionSuccessful()
+            row to stored
+        } finally {
+            database.endTransaction()
+        }
+        notifyChanged()
+        claimed
     }
 
-    fun updateScheduledMessage(id: Long, timestamp: Long) {
+    fun updateScheduledMessage(
+        id: Long,
+        timestamp: Long,
+        armAlarm: (ScheduledMessage) -> Unit = {}
+    ) {
         require(timestamp > System.currentTimeMillis()) { "Scheduled time must be in the future" }
-        val updated = db.writableDatabase.update(
-            "scheduled_messages",
-            ContentValues().apply { put("timestamp", timestamp) },
-            "id=?",
-            arrayOf(id.toString())
-        )
-        require(updated > 0) { "No scheduled message with id $id" }
+        val database = db.writableDatabase
+        database.beginTransaction()
+        try {
+            val row = scheduledMessageByIdBlocking(id) ?: error("No scheduled message with id $id")
+            val updated = database.update(
+                "scheduled_messages",
+                ContentValues().apply { put("timestamp", timestamp) },
+                "id=?",
+                arrayOf(id.toString())
+            )
+            require(updated > 0) { "No scheduled message with id $id" }
+            // Replacing the alarm before committing keeps a failed permission
+            // check from changing the visible time or consuming the old alarm.
+            armAlarm(row.copy(timestamp = timestamp))
+            database.setTransactionSuccessful()
+        } finally {
+            database.endTransaction()
+        }
         notifyChanged()
     }
 

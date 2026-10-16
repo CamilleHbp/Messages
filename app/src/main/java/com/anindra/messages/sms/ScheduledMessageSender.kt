@@ -15,31 +15,13 @@ class ScheduledMessageSender : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getLongExtra(EXTRA_ID, -1)
-        val address = intent.getStringExtra(EXTRA_ADDRESS) ?: return
-        val body = intent.getStringExtra(EXTRA_BODY) ?: return
-        val subId = intent.getIntExtra(EXTRA_SUB_ID, -1)
+        if (id < 0) return
 
         val pendingResult = goAsync()
         val wakeLock = ReceiverWakeLock.acquire(context, "scheduled-send")
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val app = context.applicationContext as MessagesApplication
-                val repo = app.repository
-                val stored = repo.sendText(
-                    repo.getOrCreateConversationBlocking(address),
-                    body
-                )
-                if (stored != null) {
-                    try {
-                        SmsSender.send(
-                            context, stored.id, address, body, subId,
-                            repo.settings.deliveryReportsEnabled
-                        )
-                    } catch (_: Exception) {
-                        repo.markMessageStatusSuspend(stored.id, "failed")
-                    }
-                }
-                repo.deleteScheduledMessage(id)
+                send(context, id, dueAt = System.currentTimeMillis())
             } catch (_: Exception) {
             } finally {
                 wakeLock.safeRelease()
@@ -56,7 +38,10 @@ class ScheduledMessageSender : BroadcastReceiver() {
         private const val ACTION_SEND = "com.anindra.messages.SCHEDULED_SEND"
 
         fun schedule(context: Context, id: Long, address: String, body: String, subId: Int, triggerAtMillis: Long) {
-            val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+            val alarmManager = checkNotNull(context.getSystemService(AlarmManager::class.java))
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                check(alarmManager.canScheduleExactAlarms()) { "Exact alarm access is required" }
+            }
             // The wrapped Intent is explicit (component + package) and built with
             // plain statements in the SAME method as the AlarmManager sink, so
             // CodeQL's intra-procedural explicit-intent sanitizer applies.
@@ -71,11 +56,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
                 context, id.toInt(), intent,
                 PendingIntent.FLAG_IMMUTABLE
             )
-            // Prefer setAlarmClock — it does NOT require SCHEDULE_EXACT_ALARM,
-            // and Android will not silently downgrade it like it does
-            // setExactAndAllowWhileIdle on API 31+ without that permission.
-            // The user-visible alarm clock affordance is acceptable for a
-            // scheduled message use case.
+            // Preserve the existing user-visible alarm and its delivery in Doze.
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 val showIntent = Intent(context, com.anindra.messages.MainActivity::class.java)
                 showIntent.setPackage(context.packageName)
@@ -90,6 +71,33 @@ class ScheduledMessageSender : BroadcastReceiver() {
             }
         }
 
+        suspend fun sendNow(context: Context, id: Long): Boolean = send(context, id)
+
+        private suspend fun send(context: Context, id: Long, dueAt: Long? = null): Boolean =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                val repo = (context.applicationContext as MessagesApplication).repository
+                val (scheduled, stored) = repo.claimScheduledMessage(id, dueAt) ?: return@withContext false
+                val accepted = runCatching {
+                    cancel(context, id)
+                    if (repo.isAddressBlocked(scheduled.address)) return@runCatching false
+                    val recipients = repo.conversationRecipients(scheduled.conversationId)
+                        .ifEmpty { listOf(scheduled.address) }
+                        .filter { com.anindra.messages.ui.isPhoneNumber(it) && !repo.isAddressBlocked(it) }
+                    val results = recipients.map { address ->
+                        SmsSender.send(
+                            context, stored.id, address, stored.body, scheduled.subId,
+                            repo.settings.deliveryReportsEnabled
+                        )
+                    }
+                    results.any { it }
+                }.getOrDefault(false)
+                if (!accepted) {
+                    repo.markMessageStatusSuspend(stored.id, "failed")
+                    NotificationHelper.showSendFailed(context, scheduled.address)
+                }
+                accepted
+            }
+
         fun cancel(context: Context, id: Long) {
             val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
             val pendingIntent = buildPendingIntent(context, id, "", "", -1)
@@ -103,6 +111,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
             context: Context, id: Long, address: String, body: String, subId: Int
         ): PendingIntent {
             val intent = Intent(context, ScheduledMessageSender::class.java).apply {
+                setPackage(context.packageName)
                 action = ACTION_SEND
                 if (address.isNotEmpty()) putExtra(EXTRA_ADDRESS, address)
                 if (body.isNotEmpty()) putExtra(EXTRA_BODY, body)

@@ -858,15 +858,13 @@ when (val plan = ForwardPlan.of(msg, text)) {
         onResult: (Boolean) -> Unit = {}
     ) {
         scope.launch(Dispatchers.IO) {
-            // The repository rejects a blank body or a non-future time by throwing;
-            // an uncaught throw here would take the process down, so the caller is
-            // told instead. (#281)
             val ok = runCatching {
                 val subId = settings.simSubscriptionId
-                val id = repo.addScheduledMessage(address, body, timestamp, conversationId, subId)
-                com.anindra.messages.sms.ScheduledMessageSender.schedule(
-                    getApplication(), id, address, body, subId, timestamp
-                )
+                repo.addScheduledMessage(address, body, timestamp, conversationId, subId) { id ->
+                    com.anindra.messages.sms.ScheduledMessageSender.schedule(
+                        getApplication(), id, address, body, subId, timestamp
+                    )
+                }
             }.isSuccess
             withContext(Dispatchers.Main) { onResult(ok) }
         }
@@ -874,21 +872,28 @@ when (val plan = ForwardPlan.of(msg, text)) {
 
     fun cancelScheduledMessage(id: Long) {
         scope.launch(Dispatchers.IO) {
-            com.anindra.messages.sms.ScheduledMessageSender.cancel(getApplication(), id)
             repo.deleteScheduledMessage(id)
+            com.anindra.messages.sms.ScheduledMessageSender.cancel(getApplication(), id)
+        }
+    }
+
+    fun sendScheduledMessageNow(id: Long, onResult: (Boolean) -> Unit = {}) {
+        scope.launch(Dispatchers.IO) {
+            val ok = runCatching {
+                com.anindra.messages.sms.ScheduledMessageSender.sendNow(getApplication(), id)
+            }.getOrDefault(false)
+            withContext(Dispatchers.Main) { onResult(ok) }
         }
     }
 
     fun rescheduleMessage(id: Long, timestamp: Long, onResult: (Boolean) -> Unit = {}) {
         scope.launch(Dispatchers.IO) {
             val ok = runCatching {
-                val row = repo.scheduledMessageById(id) ?: error("no scheduled message $id")
-                repo.updateScheduledMessage(id, timestamp)
-                // the old alarm is keyed by id, so re-arming replaces it
-                com.anindra.messages.sms.ScheduledMessageSender.cancel(getApplication(), id)
-                com.anindra.messages.sms.ScheduledMessageSender.schedule(
-                    getApplication(), id, row.address, row.body, row.subId, timestamp
-                )
+                repo.updateScheduledMessage(id, timestamp) { row ->
+                    com.anindra.messages.sms.ScheduledMessageSender.schedule(
+                        getApplication(), id, row.address, row.body, row.subId, timestamp
+                    )
+                }
             }.isSuccess
             withContext(Dispatchers.Main) { onResult(ok) }
         }
