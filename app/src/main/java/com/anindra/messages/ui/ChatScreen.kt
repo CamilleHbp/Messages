@@ -705,8 +705,9 @@ fun ChatScreen(
     val searchWantsOlder = activeSearch != null && focusedSearchId != null &&
         oldestLoadedId != null && focusedSearchId < oldestLoadedId
     val deliveryReports = remember { vm.deliveryReportsEnabled() }
-    var draft by remember { mutableStateOf("") }
-    var draftLoaded by remember { mutableStateOf(false) }
+    var draft by remember(conversationId) { mutableStateOf("") }
+    var draftLoaded by remember(conversationId) { mutableStateOf(false) }
+    var draftEdited by remember(conversationId) { mutableStateOf(false) }
     var showEmoji by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var attachSheet by remember { mutableStateOf(false) }
@@ -1193,12 +1194,7 @@ fun ChatScreen(
     }
     LaunchedEffect(convo) {
         if (convo != null && !draftLoaded) {
-            {
-                val savedDraft = convo!!.draft
-                if (savedDraft.isNotBlank()) {
-                    draft = savedDraft
-                }
-            }
+            draft = ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
             draftLoaded = true
             numberIsBlocked = vm.isNumberBlocked(convo!!.address)
         }
@@ -1358,7 +1354,7 @@ fun ChatScreen(
                                 e,
                                 style = MaterialTheme.typography.headlineMedium,
                                 modifier = Modifier
-                                    .clickable { draft += e }
+                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e }
                                     .padding(6.dp)
                             )
                         }
@@ -1412,7 +1408,10 @@ fun ChatScreen(
                         currentSimId = currentSimId,
                         onCycleSim = { cycleSim() },
                         onDraftChange = {
-                            if (it != draft) cancelDelayedSend()
+                            if (it != draft) {
+                                cancelDelayedSend()
+                                draftEdited = true
+                            }
                             draft = it
                         },
                         sendCountdown = sendCountdown,
