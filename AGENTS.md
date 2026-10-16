@@ -152,3 +152,7 @@ it assertable from a `uiautomator` dump with no screenshot. It now includes
 resolves to. Prefer extending this sheet over any screenshot comparison: a
 duplicated resolution path in the report is exactly the bug above, so it reads
 the same functions the theme renders through.
+
+## Personal fork releases
+
+Follow [docs/ForkWorkflow.md](docs/ForkWorkflow.md): keep independent upstream feature branches and integrate them into personal `main`. Personal signing and release configuration stay on `main`. Run `sh scripts/rebuild-apks` after final Android changes to build and verify debug and release APKs.
