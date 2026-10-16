@@ -3,6 +3,7 @@ package com.anindra.messages.ui
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.ContactsContract
 import android.telephony.SubscriptionManager
 import android.widget.Toast
@@ -175,6 +176,8 @@ import com.anindra.messages.data.SimSwitcher
 import com.anindra.messages.data.MessageLockCrypto
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.anindra.messages.ui.theme.LocalReduceMotion
@@ -701,8 +704,9 @@ fun ChatScreen(
     val searchWantsOlder = activeSearch != null && focusedSearchId != null &&
         oldestLoadedId != null && focusedSearchId < oldestLoadedId
     val deliveryReports = remember { vm.deliveryReportsEnabled() }
-    var draft by remember { mutableStateOf("") }
-    var draftLoaded by remember { mutableStateOf(false) }
+    var draft by remember(conversationId) { mutableStateOf("") }
+    var draftLoaded by remember(conversationId) { mutableStateOf(false) }
+    var draftEdited by remember(conversationId) { mutableStateOf(false) }
     var showEmoji by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var attachSheet by remember { mutableStateOf(false) }
@@ -737,8 +741,8 @@ fun ChatScreen(
     var detailsMessage by remember { mutableStateOf<Message?>(null) }
     var previewImageUri by remember { mutableStateOf<String?>(null) }
 
-    var pendingSendText by remember { mutableStateOf("") }
-    var sendCountdown by remember { mutableIntStateOf(0) }
+    val delayedSend = remember(conversationId) { DelayedTextSend() }
+    var sendCountdown by remember(conversationId) { mutableIntStateOf(0) }
 
     var showSchedulePicker by remember { mutableStateOf(false) }
     var scheduleStep by remember { mutableStateOf("date") }
@@ -746,19 +750,24 @@ fun ChatScreen(
     var scheduledHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
     var scheduledMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
 
-    // sendAttempt (re)arms the countdown effect; Compose cancels the old one (#93)
-    var sendAttempt by remember { mutableIntStateOf(0) }
-    LaunchedEffect(sendAttempt) {
-        if (sendAttempt == 0 || pendingSendText.isEmpty() || sendCountdown <= 0) return@LaunchedEffect
-        while (sendCountdown > 0) {
-            delay(1000L)
-            sendCountdown--
+    var sendAttempt by remember(conversationId) { mutableIntStateOf(0) }
+    fun cancelDelayedSend() {
+        if (!delayedSend.isPending) return
+        delayedSend.cancel()
+        sendCountdown = 0
+        sendAttempt++
+    }
+    LaunchedEffect(sendAttempt, conversationId) {
+        if (!delayedSend.isPending) return@LaunchedEffect
+        while (delayedSend.remainingSeconds(SystemClock.elapsedRealtime()) > 0) {
+            sendCountdown = delayedSend.remainingSeconds(SystemClock.elapsedRealtime())
+            delay(delayedSend.millisUntilNextTick(SystemClock.elapsedRealtime()))
         }
-        val toSend = pendingSendText
-        pendingSendText = ""
-        vm.send(conversationId, toSend, currentSimId)
-        vm.saveDraft(conversationId, "")
-        draft = ""
+        val pending = delayedSend.takeIfDue(SystemClock.elapsedRealtime()) ?: return@LaunchedEffect
+        sendCountdown = 0
+        vm.send(conversationId, pending.body, pending.simId)
+        draft = pending.draftAfterSending(draft)
+        vm.saveDraft(conversationId, draft)
         showEmoji = false
     }
 
@@ -1184,12 +1193,7 @@ fun ChatScreen(
     }
     LaunchedEffect(convo) {
         if (convo != null && !draftLoaded) {
-            {
-                val savedDraft = convo!!.draft
-                if (savedDraft.isNotBlank()) {
-                    draft = savedDraft
-                }
-            }
+            draft = ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
             draftLoaded = true
             numberIsBlocked = vm.isNumberBlocked(convo!!.address)
         }
@@ -1329,7 +1333,7 @@ fun ChatScreen(
                     ScheduledMessageTray(scheduledHere, onManage = { managedSchedule = it })
                 }
                 AnimatedVisibility(
-                    visible = showEmoji && !selectionActive,
+                    visible = showEmoji && !selectionActive && sendCountdown == 0,
                     enter = if (reduceMotion) fadeIn(tween(0))
                     else fadeIn(motionTween(false, Motion.DURATION_SHORT4)) +
                         expandVertically(
@@ -1352,7 +1356,7 @@ fun ChatScreen(
                                 e,
                                 style = MaterialTheme.typography.headlineMedium,
                                 modifier = Modifier
-                                    .clickable { draft += e }
+                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e }
                                     .padding(6.dp)
                             )
                         }
@@ -1405,7 +1409,15 @@ fun ChatScreen(
                         sims = sims,
                         currentSimId = currentSimId,
                         onCycleSim = { cycleSim() },
-                        onDraftChange = { draft = it },
+                        onDraftChange = {
+                            if (it != draft) {
+                                cancelDelayedSend()
+                                draftEdited = true
+                            }
+                            draft = it
+                        },
+                        sendCountdown = sendCountdown,
+                        onCancelSend = ::cancelDelayedSend,
                         hasAttachments = pendingMedia.isNotEmpty(),
                         onSend = {
                             if (pendingMedia.isNotEmpty()) {
@@ -1420,9 +1432,11 @@ fun ChatScreen(
                                     }
                                     if (addr.isBlank()) return@InputBar
                                     if (vm.settings.delayedSendingEnabled) {
-                                        pendingSendText = text
-                                        sendCountdown = vm.settings.delaySeconds
-                                        sendAttempt++
+                                        if (delayedSend.start(draft, currentSimId, vm.settings.delaySeconds, SystemClock.elapsedRealtime())) {
+                                            sendCountdown = delayedSend.remainingSeconds(SystemClock.elapsedRealtime())
+                                            showEmoji = false
+                                            sendAttempt++
+                                        }
                                     } else {
                                         vm.send(conversationId, text, currentSimId)
                                         vm.saveDraft(conversationId, "")
@@ -1572,34 +1586,6 @@ fun ChatScreen(
                     )
                 }
             }
-            if (sendCountdown > 0) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            String.format(context.getString(R.string.chat_sending_countdown), sendCountdown),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        TextButton(onClick = {
-                            sendAttempt++          // cancels the ticking effect
-                            sendCountdown = 0
-                            pendingSendText = ""
-                        }) {
-                            Text(stringResource(R.string.chat_cancel))
-                        }
-                    }
-                }
-            }
-
         }
     }
 
@@ -2071,6 +2057,7 @@ internal fun ChatTopBar(
                                         )
                                     }
                                 },
+                                enabled = sendCountdown == 0,
                                 onClick = {
                                     onMenuDismiss()
                                     onSimSelect(sub.subscriptionId, simLabel)
@@ -2803,8 +2790,11 @@ internal fun InputBar(
     hasAttachments: Boolean = false,
     sims: List<SimCard> = emptyList(),
     currentSimId: Int = -1,
-    onCycleSim: () -> Unit = {}
+    onCycleSim: () -> Unit = {},
+    sendCountdown: Int = 0,
+    onCancelSend: () -> Unit = {}
 ) {
+    val isPending = sendCountdown > 0
     Row(
         modifier = Modifier.fillMaxWidth().imePadding().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -2819,7 +2809,7 @@ internal fun InputBar(
                 onValueChange = onDraftChange,
                 placeholder = { Text(placeholder) },
                 leadingIcon = {
-                    IconButton(onClick = onAttach) {
+                    IconButton(onClick = onAttach, enabled = !isPending) {
                         Icon(
                             Icons.Rounded.AddCircleOutline, stringResource(R.string.icon_attach),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2838,7 +2828,7 @@ internal fun InputBar(
                                 else -> "${SimSwitcher.selectedIndex(currentSimId, sims) + 1}"
                             }
                             Box(
-                                modifier = Modifier.size(40.dp).clickable { onCycleSim() },
+                                modifier = Modifier.size(40.dp).clickable(enabled = !isPending) { onCycleSim() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -2857,7 +2847,7 @@ internal fun InputBar(
                             }
                         }
                         if (showEmojiButton) {
-                            IconButton(onClick = onEmojiToggle, modifier = Modifier.size(40.dp)) {
+                            IconButton(onClick = onEmojiToggle, enabled = !isPending, modifier = Modifier.size(40.dp)) {
                                 Icon(
                                     Icons.Rounded.EmojiEmotions, stringResource(R.string.icon_emoji),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2878,7 +2868,9 @@ internal fun InputBar(
             )
         }
         Spacer(Modifier.width(8.dp))
-        val canSend = draft.isNotBlank() || hasAttachments
+        val canSend = isPending || draft.isNotBlank() || hasAttachments
+        val actionLabel = stringResource(if (isPending) R.string.chat_cancel else R.string.icon_send)
+        val countdownLabel = if (isPending) stringResource(R.string.chat_sending_countdown, sendCountdown) else ""
         Box(
             Modifier
                 .size(48.dp)
@@ -2889,16 +2881,38 @@ internal fun InputBar(
                 )
                 .combinedClickable(
                     enabled = canSend,
-                    onClick = onSend,
-                    onLongClick = onSchedule
-                ),
+                    role = Role.Button,
+                    onClickLabel = actionLabel,
+                    onClick = if (isPending) onCancelSend else onSend,
+                    onLongClick = if (isPending) null else onSchedule
+                )
+                .semantics {
+                    contentDescription = actionLabel
+                    if (isPending) stateDescription = countdownLabel
+                },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.AutoMirrored.Rounded.Send, stringResource(R.string.icon_send),
-                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = if (canSend) 1f else 0.38f),
-                modifier = Modifier.size(20.dp)
-            )
+            if (isPending) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = String.format("%d", sendCountdown),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Icon(
+                        Icons.Rounded.Close, null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Rounded.Send, null,
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = if (canSend) 1f else 0.38f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

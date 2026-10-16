@@ -592,6 +592,20 @@ private fun InputBarPreview() {
 }
 
 @PreviewLightDark
+@Preview(name = "Send countdown", showBackground = true, widthDp = 320, fontScale = 1.3f)
+@Composable
+private fun InputBarCountdownPreview() {
+    MessagesTheme {
+        InputBar(
+            draft = "Running ten minutes late",
+            placeholder = "Text message",
+            onDraftChange = {}, onSend = {}, onEmojiToggle = {}, onAttach = {},
+            sendCountdown = 30, onCancelSend = {}
+        )
+    }
+}
+
+@PreviewLightDark
 @Preview(name = "Attach sheet", showBackground = true, widthDp = 380, heightDp = 640)
 @Composable
 private fun AttachSheetPreview() {
