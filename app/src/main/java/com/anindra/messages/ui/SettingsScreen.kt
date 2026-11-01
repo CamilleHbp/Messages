@@ -373,6 +373,17 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsGroup {
+                SettingsRow(
+                    title = stringResource(R.string.app_check_updates),
+                    subtitle = stringResource(R.string.app_installed_version, com.anindra.messages.BuildConfig.VERSION_NAME, com.anindra.messages.BuildConfig.VERSION_CODE),
+                    onClick = {
+                        var owner = context
+                            while (owner is android.content.ContextWrapper && owner !is android.app.Activity) owner = owner.baseContext
+                            (owner as? android.app.Activity)?.let { studio.camille.updater.CamilleUpdater.checkNow(it) }
+                    }
+                )
+            }
             SettingsFooter(stringResource(R.string.messages_footer))
         }
     }
