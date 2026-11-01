@@ -17,8 +17,8 @@ android {
         applicationId = "com.anindra.messages"
         minSdk = 29
         targetSdk = 36
-        versionCode = 36
-        versionName = "1.0.30-camille.3"
+        versionCode = 37
+        versionName = "1.0.30-camille.4"
     }
 
     // RELEASE_KEYSTORE lets a throwaway key stand in for a side build without
@@ -75,7 +75,7 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/camille-updater-1.0.3.aar"))
+    implementation(files("libs/camille-updater-1.0.5.aar"))
     implementation(project(":mms"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime)
