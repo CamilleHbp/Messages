@@ -2077,6 +2077,20 @@ class Repository(private val context: Context) {
         out
     }
 
+    suspend fun restoreScheduledAlarms(armAlarm: (Long, Long) -> Unit) = runOnIoAsync {
+        val database = db.writableDatabase
+        // Serialize recovery with edits so an older snapshot cannot replace a rescheduled alarm.
+        database.beginTransaction()
+        try {
+            database.rawQuery("SELECT id,timestamp FROM scheduled_messages", null).use { rows ->
+                while (rows.moveToNext()) armAlarm(rows.getLong(0), rows.getLong(1))
+            }
+            database.setTransactionSuccessful()
+        } finally {
+            database.endTransaction()
+        }
+    }
+
     fun addScheduledMessage(
         address: String,
         body: String,

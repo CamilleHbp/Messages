@@ -92,8 +92,6 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Schedule
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -116,12 +114,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -192,7 +187,6 @@ import com.anindra.messages.ui.theme.onSelectedBubble
 import com.anindra.messages.ui.theme.outgoingBubble
 import com.anindra.messages.ui.theme.selectedBubble
 import java.io.File
-import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -745,10 +739,7 @@ fun ChatScreen(
     var sendCountdown by remember(conversationId) { mutableIntStateOf(0) }
 
     var showSchedulePicker by remember { mutableStateOf(false) }
-    var scheduleStep by remember { mutableStateOf("date") }
-    var scheduledDateMillis by remember { mutableStateOf<Long?>(null) }
-    var scheduledHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
-    var scheduledMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
+    var savingSchedule by remember(conversationId) { mutableStateOf(false) }
 
     var sendAttempt by remember(conversationId) { mutableIntStateOf(0) }
     fun cancelDelayedSend() {
@@ -1446,6 +1437,7 @@ fun ChatScreen(
                                 }
                             }
                         },
+                        schedulingEnabled = vm.settings.scheduledMessagesEnabled,
                         onSchedule = {
                             val text = draft.trim()
                             if (text.isNotEmpty()) {
@@ -1455,7 +1447,6 @@ fun ChatScreen(
                                     return@InputBar
                                 }
                                 if (addr.isBlank()) return@InputBar
-                                scheduleStep = "date"
                                 showSchedulePicker = true
                             }
                         },
@@ -1716,27 +1707,17 @@ fun ChatScreen(
     }
 
     if (showSchedulePicker) {
-        ChatSchedulePicker(
-            visible = showSchedulePicker,
-            step = scheduleStep,
-            conversationId = conversationId,
-            address = convo?.address ?: "",
-            draft = draft,
-            scheduledDateMillis = scheduledDateMillis,
-            scheduledHour = scheduledHour,
-            scheduledMinute = scheduledMinute,
-            onDateSelected = { millis ->
-                scheduledDateMillis = millis
-                scheduleStep = "time"
-            },
-            onTimeSelected = { hour, minute ->
-                scheduledHour = hour
-                scheduledMinute = minute
-            },
-            onSchedule = { ts ->
+        ReschedulePicker(
+            timestamp = remember { System.currentTimeMillis() + 5 * 60_000L },
+            dateButton = R.string.chat_next,
+            saving = savingSchedule,
+            onDone = { ts ->
                 val text = draft.trim()
-                val addr = convo?.address ?: return@ChatSchedulePicker
-                vm.scheduleMessage(addr, text, ts, conversationId) { ok ->
+                val addr = convo?.address ?: return@ReschedulePicker
+                if (savingSchedule) return@ReschedulePicker
+                savingSchedule = true
+                vm.scheduleMessage(addr, text, ts, conversationId, currentSimId) { ok ->
+                    savingSchedule = false
                     if (!ok) {
                         Toast.makeText(
                             context, context.getString(R.string.chat_schedule_failed), Toast.LENGTH_LONG
@@ -2185,70 +2166,6 @@ internal fun SkeletonMessageRow() {
                     .shimmer()
             )
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ChatSchedulePicker(
-    visible: Boolean,
-    step: String,
-    conversationId: Long,
-    address: String,
-    draft: String,
-    scheduledDateMillis: Long?,
-    scheduledHour: Int,
-    scheduledMinute: Int,
-    onDateSelected: (millis: Long) -> Unit,
-    onTimeSelected: (hour: Int, minute: Int) -> Unit,
-    onSchedule: (millis: Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    if (!visible) return
-    val context = LocalContext.current
-    if (step == "date") {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = scheduledDateMillis ?: System.currentTimeMillis()
-        )
-        DatePickerDialog(
-            onDismissRequest = onDismiss,
-            confirmButton = {
-                TextButton(onClick = { onDateSelected(datePickerState.selectedDateMillis ?: System.currentTimeMillis()) }) {
-                    Text(stringResource(R.string.chat_next))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    } else if (step == "time") {
-        val timePickerState = rememberTimePickerState(
-            initialHour = scheduledHour,
-            initialMinute = scheduledMinute,
-            is24Hour = is24HourFormat(context)
-        )
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(stringResource(R.string.chat_select_time)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onTimeSelected(timePickerState.hour, timePickerState.minute)
-                    onSchedule(
-                        com.anindra.messages.data.ScheduledTime.resolve(
-                            scheduledDateMillis ?: System.currentTimeMillis(),
-                            timePickerState.hour,
-                            timePickerState.minute
-                        )
-                    )
-                }) { Text(stringResource(R.string.chat_schedule)) }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
-            }
-        )
     }
 }
 
@@ -2784,6 +2701,7 @@ internal fun InputBar(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onSchedule: () -> Unit = {},
+    schedulingEnabled: Boolean = true,
     onEmojiToggle: () -> Unit,
     onAttach: () -> Unit,
     showEmojiButton: Boolean = false,
@@ -2868,6 +2786,12 @@ internal fun InputBar(
             )
         }
         Spacer(Modifier.width(8.dp))
+        val canSchedule = schedulingEnabled && !isPending && !hasAttachments && draft.isNotBlank()
+        if (canSchedule) {
+            IconButton(onClick = onSchedule) {
+                Icon(Icons.Rounded.Schedule, stringResource(R.string.chat_schedule))
+            }
+        }
         val canSend = isPending || draft.isNotBlank() || hasAttachments
         val actionLabel = stringResource(if (isPending) R.string.chat_cancel else R.string.icon_send)
         val countdownLabel = if (isPending) stringResource(R.string.chat_sending_countdown, sendCountdown) else ""
@@ -2884,7 +2808,8 @@ internal fun InputBar(
                     role = Role.Button,
                     onClickLabel = actionLabel,
                     onClick = if (isPending) onCancelSend else onSend,
-                    onLongClick = if (isPending) null else onSchedule
+                    onLongClickLabel = if (canSchedule) stringResource(R.string.chat_schedule) else null,
+                    onLongClick = if (canSchedule) onSchedule else null
                 )
                 .semantics {
                     contentDescription = actionLabel

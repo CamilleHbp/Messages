@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import com.anindra.messages.ui.ChatSchedulePicker
 import com.anindra.messages.ui.ConversationRow
 import com.anindra.messages.ui.ImportRadioGroup
 import com.anindra.messages.ui.ScheduledRow
@@ -132,30 +131,6 @@ private fun ScheduledRowPreview() {
             onOpenChat = {},
             onReschedule = {},
             onCancel = {}
-        )
-    }
-}
-
-@PreviewLightDark
-@Preview(name = "Schedule a message picker", showBackground = true, widthDp = 380, heightDp = 640)
-@Composable
-private fun ChatSchedulePickerPreview() {
-    // The picker is a multi-step dialog; the date and time steps are the two
-    // that render distinct content, so both are shown.
-    Stage {
-        ChatSchedulePicker(
-            visible = true,
-            step = "date",
-            conversationId = 1L,
-            address = "+15551230001",
-            draft = "See you at 6",
-            scheduledDateMillis = SAMPLE_TS,
-            scheduledHour = 18,
-            scheduledMinute = 30,
-            onDateSelected = {},
-            onTimeSelected = { _, _ -> },
-            onSchedule = { _ -> },
-            onDismiss = {}
         )
     }
 }

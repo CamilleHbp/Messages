@@ -848,6 +848,12 @@ when (val plan = ForwardPlan.of(msg, text)) {
         NotificationHelper.showSendFailed(getApplication(), address)
     }
 
+    init {
+        scope.launch(Dispatchers.IO) {
+            com.anindra.messages.sms.ScheduledMessageSender.restoreAlarms(getApplication())
+        }
+    }
+
     fun scheduledMessages() = repo.scheduledMessages()
 
     fun scheduleMessage(
@@ -855,14 +861,14 @@ when (val plan = ForwardPlan.of(msg, text)) {
         body: String,
         timestamp: Long,
         conversationId: Long,
+        subId: Int = settings.simSubscriptionId,
         onResult: (Boolean) -> Unit = {}
     ) {
         scope.launch(Dispatchers.IO) {
             val ok = runCatching {
-                val subId = settings.simSubscriptionId
                 repo.addScheduledMessage(address, body, timestamp, conversationId, subId) { id ->
                     com.anindra.messages.sms.ScheduledMessageSender.schedule(
-                        getApplication(), id, address, body, subId, timestamp
+                        getApplication(), id, timestamp
                     )
                 }
             }.isSuccess
@@ -891,7 +897,7 @@ when (val plan = ForwardPlan.of(msg, text)) {
             val ok = runCatching {
                 repo.updateScheduledMessage(id, timestamp) { row ->
                     com.anindra.messages.sms.ScheduledMessageSender.schedule(
-                        getApplication(), id, row.address, row.body, row.subId, timestamp
+                        getApplication(), row.id, row.timestamp
                     )
                 }
             }.isSuccess
