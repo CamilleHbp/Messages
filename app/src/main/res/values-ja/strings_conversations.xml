@@ -36,4 +36,6 @@
     <string name="convo_pinned">ピン留めしました</string>
     <string name="convo_unpinned">ピンを外しました</string>
     <string name="convo_blocked">番号をブロックしました</string>
+    <string name="conversations_clear_search">検索をクリア</string>
+    <string name="conversations_no_matches">一致する会話はありません</string>
 </resources>

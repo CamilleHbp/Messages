@@ -35,12 +35,11 @@ private const val SEARCH_DEBOUNCE_MS = 180L
  *
  * Deliberately *not* filtered by which query produced it: returning the
  * outgoing set keeps the list populated while the new one settles. The brief
- * over-inclusion is invisible; a blank is not. It is a plain class rather than
- * composable state so the rule can be unit tested without a UI harness.
+ * over-inclusion is invisible; a blank is not. The holder also records which query settled so the empty state can wait for it.
  */
 class HeldMessageMatches {
-    private var settledQuery: String = ""
-    private var settled: Set<Long> = emptySet()
+    private var settledQuery by mutableStateOf("")
+    private var settled by mutableStateOf(emptySet<Long>())
 
     /** A blank query has no matches at all and clears immediately. */
     fun onQueryStarted(query: String) {
@@ -67,34 +66,30 @@ class HeldMessageMatches {
  * [query]. Shared by both conversation lists.
  */
 @Composable
-fun rememberMessageMatchIds(vm: AppViewModel, query: String): Set<Long> {
-    val held = remember { HeldMessageMatches() }
-    var ids by remember { mutableStateOf(emptySet<Long>()) }
+fun rememberMessageMatches(vm: AppViewModel, query: String): HeldMessageMatches {
     // Keyed on the setting too: a toggle has to re-answer the same query, and
     // the visibility rule reads it on the repository side.
     val hideLinks = vm.settings.hideLinks
-    LaunchedEffect(query, hideLinks) {
+    val held = remember(vm, hideLinks) { HeldMessageMatches() }
+    LaunchedEffect(query, held) {
         // A number query has no message hits by definition — ConversationList.filter
         // matches it on address alone — so don't pay for the LIKE scan over every
         // message body. Clearing the held set too stops a previous text query's ids
         // surviving, which would over-include if a letter is typed mid-number.
         if (AddressIdentity.isNumberQuery(query)) {
-            held.onQueryStarted("")
-            ids = emptySet()
+            held.onResultArrived(query, emptySet())
             return@LaunchedEffect
         }
         held.onQueryStarted(query)
         if (query.isBlank()) {
-            ids = held.current()
             return@LaunchedEffect
         }
         delay(SEARCH_DEBOUNCE_MS)
         vm.conversationIdsMatchingMessage(query, hideLinks).collect {
             held.onResultArrived(query, it)
-            ids = held.current()
         }
     }
-    return ids
+    return held
 }
 
 /**

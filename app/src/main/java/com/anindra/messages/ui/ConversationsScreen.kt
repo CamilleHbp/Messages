@@ -41,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Delete
@@ -332,10 +333,11 @@ fun ConversationsScreen(
     val showArchiving = vm.settings.archivingEnabled
     val unreadAtTop = vm.settings.unreadAtTopEnabled
 
-    val messageMatchIds = rememberMessageMatchIds(vm, query)
+    val searchQuery = query.trim()
+    val messageMatches = rememberMessageMatches(vm, searchQuery)
 
     val displayed = rememberSearchResults(
-        conversations, showArchived, query, unreadAtTop, rowSettings.hideLinks, messageMatchIds
+        conversations, showArchived, searchQuery, unreadAtTop, rowSettings.hideLinks, messageMatches.current()
     )
 
     // Reveal a new unread only while the user is still at the top.
@@ -384,6 +386,11 @@ fun ConversationsScreen(
                         value = query,
                         onValueChange = { query = it },
                         placeholder = { Text(stringResource(R.string.conversations_search)) },
+                        trailingIcon = if (query.isEmpty()) null else ({
+                            IconButton(onClick = { query = ""; focusRequester.requestFocus() }) {
+                                Icon(Icons.Rounded.Close, stringResource(R.string.conversations_clear_search))
+                            }
+                        }),
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -492,6 +499,15 @@ fun ConversationsScreen(
                     }) {
                         Text(stringResource(R.string.conversations_open_settings))
                     }
+                }
+            } else if (searchQuery.isNotEmpty() && displayed.isEmpty() && messageMatches.isSettledFor(searchQuery)) {
+                Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(R.string.conversations_no_matches),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
             } else {
                 CompositionLocalProvider(

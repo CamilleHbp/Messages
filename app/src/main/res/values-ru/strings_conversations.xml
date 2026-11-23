@@ -36,4 +36,6 @@
     <string name="convo_pinned">Закреплено</string>
     <string name="convo_unpinned">Закрепление снято</string>
     <string name="convo_blocked">Номер заблокирован</string>
+    <string name="conversations_clear_search">Очистить поиск</string>
+    <string name="conversations_no_matches">Подходящих переписок нет</string>
 </resources>

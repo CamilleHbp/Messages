@@ -36,4 +36,6 @@
     <string name="convo_pinned">Pinned</string>
     <string name="convo_unpinned">Unpinned</string>
     <string name="convo_blocked">Number blocked</string>
+    <string name="conversations_clear_search">Clear search</string>
+    <string name="conversations_no_matches">No matching conversations</string>
 </resources>

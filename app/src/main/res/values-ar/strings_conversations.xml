@@ -36,4 +36,6 @@
     <string name="convo_pinned">تم التثبيت</string>
     <string name="convo_unpinned">تم إلغاء التثبيت</string>
     <string name="convo_blocked">تم حظر الرقم</string>
+    <string name="conversations_clear_search">محو البحث</string>
+    <string name="conversations_no_matches">لا توجد محادثات مطابقة</string>
 </resources>

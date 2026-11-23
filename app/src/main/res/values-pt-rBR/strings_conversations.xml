@@ -36,4 +36,6 @@
     <string name="convo_pinned">Fixado</string>
     <string name="convo_unpinned">Desafixado</string>
     <string name="convo_blocked">Número bloqueado</string>
+    <string name="conversations_clear_search">Limpar pesquisa</string>
+    <string name="conversations_no_matches">Nenhuma conversa correspondente</string>
 </resources>
