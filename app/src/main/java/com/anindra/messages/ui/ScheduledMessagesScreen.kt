@@ -61,7 +61,6 @@ import com.anindra.messages.data.ScheduledMessage
 import com.anindra.messages.data.ScheduledTime
 import java.time.Instant
 import java.time.ZoneId
-import java.time.ZoneOffset
 
 /**
  * Every scheduled message across all conversations, searchable by contact.
@@ -78,6 +77,7 @@ fun ScheduledMessagesScreen(
     val scheduled by vm.scheduledMessages().collectAsState(initial = emptyList())
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    val context = LocalContext.current
     var editing by remember { mutableStateOf<ScheduledMessage?>(null) }
 
     val contacts by vm.contacts.collectAsState()
@@ -195,8 +195,10 @@ fun ScheduledMessagesScreen(
         ReschedulePicker(
             timestamp = sm.timestamp,
             onDone = { millis ->
-                vm.rescheduleMessage(sm.id, millis)
-                editing = null
+                vm.rescheduleMessage(sm.id, millis) { ok ->
+                    if (ok) editing = null
+                    else android.widget.Toast.makeText(context, R.string.chat_schedule_failed, android.widget.Toast.LENGTH_SHORT).show()
+                }
             },
             onDismiss = { editing = null }
         )
@@ -284,56 +286,65 @@ internal fun ScheduledRow(
 /** Date + time sheets that re-arm an existing schedule. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReschedulePicker(timestamp: Long, onDone: (Long) -> Unit, onDismiss: () -> Unit) {
+internal fun ReschedulePicker(
+    timestamp: Long,
+    dateButton: Int = R.string.chat_schedule,
+    saving: Boolean = false,
+    onDone: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
     val current = Instant.ofEpochMilli(timestamp).atZone(zone)
-    var step by remember { mutableStateOf("date") }
-    var pickedDate by remember { mutableStateOf<java.time.LocalDate?>(null) }
-
-    if (step == "date") {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = current.toLocalDate()
-                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        )
+    var pickedDay by remember { mutableStateOf<Long?>(null) }
+    if (pickedDay == null) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = ScheduledTime.pickerDate(timestamp, zone))
         DatePickerDialog(
             onDismissRequest = onDismiss,
             confirmButton = {
-                TextButton(onClick = {
-                    pickedDate = ScheduledTime.selectedDate(
-                        datePickerState.selectedDateMillis ?: current.toLocalDate()
-                            .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-                    )
-                    step = "time"
-                }) { Text(stringResource(R.string.chat_schedule)) }
+                val selected = datePickerState.selectedDateMillis
+                TextButton(
+                    enabled = selected != null && selected >= ScheduledTime.pickerDate(System.currentTimeMillis(), zone),
+                    onClick = { pickedDay = selected }
+                ) { Text(stringResource(dateButton)) }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     } else {
         val timePickerState = rememberTimePickerState(
             initialHour = current.hour,
             initialMinute = current.minute,
             is24Hour = is24HourFormat(context)
         )
+        val selected = ScheduledTime.atTime(checkNotNull(pickedDay), timePickerState.hour, timePickerState.minute, zone)
+        var expired by remember(selected) { mutableStateOf(selected <= System.currentTimeMillis()) }
+        LaunchedEffect(selected) {
+            kotlinx.coroutines.delay((selected - System.currentTimeMillis()).coerceAtLeast(0L))
+            expired = true
+        }
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text(stringResource(R.string.chat_select_time)) },
-            text = { TimePicker(state = timePickerState) },
+            text = {
+                Column {
+                    TimePicker(state = timePickerState)
+                    if (expired) {
+                        Text(stringResource(R.string.chat_schedule_future), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    val day = pickedDate ?: current.toLocalDate()
-                    onDone(
-                        day.atTime(timePickerState.hour, timePickerState.minute)
-                            .atZone(zone).toInstant().toEpochMilli()
-                    )
-                }) { Text(stringResource(R.string.chat_schedule)) }
+                TextButton(
+                    enabled = !expired && !saving,
+                    onClick = {
+                        if (selected > System.currentTimeMillis()) onDone(selected) else expired = true
+                    }
+                ) { Text(stringResource(R.string.chat_schedule)) }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
+                TextButton(onClick = { pickedDay = null }) { Text(stringResource(R.string.icon_back)) }
             }
         )
     }

@@ -75,59 +75,18 @@ class ScheduledTimeTest {
         assertEquals(59, local.minute)
     }
 
-    // --- resolve: never hand the repository a past timestamp -------------
-
-    @Test
-    fun resolveKeepsAFutureTimeOnTheChosenDay() {
-        val now = ScheduledTime.atTime(pickerValue(LocalDate.of(2026, 9, 28)), 9, 0, chicago)
-        val picked = pickerValue(LocalDate.of(2026, 9, 28))
-        val ts = ScheduledTime.resolve(picked, 16, 36, chicago, now)
-        assertEquals(ts, ScheduledTime.atTime(picked, 16, 36, chicago))
+    @Test fun initialPickerDayIsLocalOnBothSidesOfTheUtcDateBoundary() {
+        val earlyUtc = java.time.Instant.parse("2026-09-28T02:00:00Z").toEpochMilli()
+        val lateUtc = java.time.Instant.parse("2026-09-28T22:00:00Z").toEpochMilli()
+        assertEquals(pickerValue(LocalDate.of(2026, 9, 27)), ScheduledTime.pickerDate(earlyUtc, chicago))
+        assertEquals(pickerValue(LocalDate.of(2026, 9, 29)), ScheduledTime.pickerDate(lateUtc, kolkata))
     }
 
-    @Test
-    fun resolveRollsAPastTimeForwardToTomorrowSoItStaysInTheFuture() {
-        // The reported crash: "today" plus a time that had already gone by.
-        val now = ScheduledTime.atTime(pickerValue(LocalDate.of(2026, 9, 28)), 15, 36, chicago)
-        val picked = pickerValue(LocalDate.of(2026, 9, 28))
-        val ts = ScheduledTime.resolve(picked, 9, 0, chicago, now)
-        assertTrue("must be in the future, was $ts vs $now", ts > now)
-        val local = java.time.Instant.ofEpochMilli(ts).atZone(chicago)
-        assertEquals(LocalDate.of(2026, 9, 29), local.toLocalDate())
-        assertEquals(9, local.hour)
-    }
-
-    @Test
-    fun resolveKeepsTheTimeOfDayEvenWhenItRollsToTomorrow() {
-        val now = ScheduledTime.atTime(pickerValue(LocalDate.of(2026, 9, 28)), 15, 36, chicago)
-        val ts = ScheduledTime.resolve(pickerValue(LocalDate.of(2026, 9, 28)), 9, 5, chicago, now)
-        val local = java.time.Instant.ofEpochMilli(ts).atZone(chicago)
-        assertEquals(9, local.hour)
-        assertEquals(5, local.minute)
-    }
-
-    @Test
-    fun resolveIsAlwaysStrictlyInTheFuture() {
-        val picked = pickerValue(LocalDate.of(2026, 9, 28))
-        val now = ScheduledTime.atTime(picked, 15, 36, chicago)
-        for (hour in 0..23) {
-            for (minute in 0..59) {
-                val ts = ScheduledTime.resolve(picked, hour, minute, chicago, now)
-                assertTrue(
-                    "hour=$hour minute=$minute produced $ts (now=$now)",
-                    ts > now
-                )
-            }
-        }
-    }
-
-    @Test
-    fun resolveDoesNotRollBackwardsOnAZoneEastOfUtc() {
-        val now = ScheduledTime.atTime(pickerValue(LocalDate.of(2026, 9, 28)), 15, 36, kolkata)
-        val picked = pickerValue(LocalDate.of(2026, 9, 28))
-        val ts = ScheduledTime.resolve(picked, 18, 0, kolkata, now)
-        val local = java.time.Instant.ofEpochMilli(ts).atZone(kolkata)
-        assertEquals(LocalDate.of(2026, 9, 28), local.toLocalDate())
-        assertEquals(18, local.hour)
+    @Test fun pickingAPastMinutePreservesTheSelectedDayForValidation() {
+        val day = pickerValue(LocalDate.of(2026, 9, 28))
+        val now = ScheduledTime.atTime(day, 15, 36, chicago)
+        val selected = ScheduledTime.atTime(day, 9, 0, chicago)
+        assertTrue(selected < now)
+        assertEquals(day, ScheduledTime.pickerDate(selected, chicago))
     }
 }
