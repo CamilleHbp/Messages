@@ -17,6 +17,13 @@ class ScheduledDeliveryWiringTest {
         .substringBefore("fun updateScheduledMessage(")
     private val dispatch = sender.substringAfter("private suspend fun send(").substringBefore("fun cancel(")
 
+    @Test fun scheduledSmsUsesOneShotIdleDeliveryWithoutAlarmClockWakeup() {
+        assertTrue(sender.contains("alarmManager.setExactAndAllowWhileIdle("))
+        assertTrue(sender.contains("alarmManager.setAndAllowWhileIdle("))
+        assertFalse(sender.contains("setAlarmClock("))
+        assertFalse(sender.contains("setRepeating("))
+    }
+
     @Test fun anAlarmUsesTheDatabaseInsteadOfStaleIntentPayload() {
         assertTrue(receive.contains("intent.getLongExtra(EXTRA_ID"))
         assertFalse(receive.contains("getStringExtra"))

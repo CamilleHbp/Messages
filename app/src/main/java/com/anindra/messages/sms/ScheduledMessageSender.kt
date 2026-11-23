@@ -58,14 +58,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
             val exactAllowed = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
                 alarmManager.canScheduleExactAlarms()
             armScheduledAlarm(exactAllowed, exact = {
-                val showIntent = Intent(context, com.anindra.messages.MainActivity::class.java)
-                showIntent.setPackage(context.packageName)
-                val showPi = PendingIntent.getActivity(
-                    context, id.toInt(), showIntent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-                val info = AlarmManager.AlarmClockInfo(triggerAtMillis, showPi)
-                alarmManager.setAlarmClock(info, pendingIntent)
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }, inexact = {
                 alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             })
