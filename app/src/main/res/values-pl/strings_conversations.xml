@@ -36,4 +36,6 @@
     <string name="convo_pinned">Przypięto</string>
     <string name="convo_unpinned">Odpięto</string>
     <string name="convo_blocked">Numer zablokowany</string>
+    <string name="conversations_clear_search">Wyczyść wyszukiwanie</string>
+    <string name="conversations_no_matches">Brak pasujących rozmów</string>
 </resources>

@@ -36,4 +36,6 @@
     <string name="convo_pinned">पिन किया गया</string>
     <string name="convo_unpinned">पिन हटाया गया</string>
     <string name="convo_blocked">नंबर अवरुद्ध किया गया</string>
+    <string name="conversations_clear_search">खोज मिटाएँ</string>
+    <string name="conversations_no_matches">कोई मेल खाती बातचीत नहीं मिली</string>
 </resources>

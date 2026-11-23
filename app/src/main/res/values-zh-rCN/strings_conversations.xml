@@ -35,4 +35,6 @@
     <string name="convo_pinned">已置顶</string>
     <string name="convo_unpinned">已取消置顶</string>
     <string name="convo_blocked">已屏蔽该号码</string>
+    <string name="conversations_clear_search">清除搜索</string>
+    <string name="conversations_no_matches">没有匹配的对话</string>
 </resources>

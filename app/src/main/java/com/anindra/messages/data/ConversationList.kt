@@ -1,10 +1,23 @@
 package com.anindra.messages.data
 
+import java.text.Normalizer
+
 /**
  * Ordering + filtering rules for the conversation list, kept pure so the sort
  * is unit testable rather than inlined in the composable.
  */
 object ConversationList {
+
+    private val latinAccents = Regex("(?<=\\p{sc=Latin})\\p{M}+")
+
+    private fun searchableName(value: String): String =
+        if (value.all { it.code < 128 }) value
+        else Normalizer.normalize(value, Normalizer.Form.NFD).replace(latinAccents, "")
+
+    private fun matchesContact(conversation: Conversation, query: String, foldedQuery: String): Boolean =
+        conversation.address.contains(query, ignoreCase = true) ||
+            searchableName(conversation.name).contains(foldedQuery, ignoreCase = true) ||
+            searchableName(conversation.groupTitle).contains(foldedQuery, ignoreCase = true)
 
     /**
      * Drops blocked conversations, keeps either the inbox or the archive, then
@@ -43,10 +56,11 @@ object ConversationList {
             // a snippet match (issue #284).
             list.filter { AddressIdentity.matchesNumber(it.address, query) }
         } else {
+            val foldedQuery = searchableName(query)
             list.filter {
                 val snippet = snippetFor(it)
                 it.id in messageMatchIds ||
-                    it.name.contains(query, true) || it.address.contains(query, true) ||
+                    matchesContact(it, query, foldedQuery) ||
                     snippet.contains(query, true) ||
                     AddressIdentity.matchesNumber(it.address, query)
             }
@@ -68,8 +82,9 @@ object ConversationList {
             AddressIdentity.tooShortToBeNumber(query) ||
             AddressIdentity.isNumberQuery(query)
         ) return conversations
+        val foldedQuery = searchableName(query)
         val (named, mentioned) = conversations.partition {
-            it.name.contains(query, true) || it.address.contains(query, true)
+            matchesContact(it, query, foldedQuery)
         }
         return named + mentioned
     }
@@ -86,7 +101,7 @@ object ConversationList {
     fun handoffQuery(conversation: Conversation, query: String): String {
         val q = query.trim()
         if (q.isEmpty()) return ""
-        return if (conversation.name.contains(q, true) || conversation.address.contains(q, true)) "" else q
+        return if (matchesContact(conversation, q, searchableName(q))) "" else q
     }
 
     /**

@@ -34,4 +34,6 @@
     <string name="convo_pinned">Épinglé</string>
     <string name="convo_unpinned">Désépinglé</string>
     <string name="convo_blocked">Numéro bloqué</string>
+    <string name="conversations_clear_search">Effacer la recherche</string>
+    <string name="conversations_no_matches">Aucune conversation correspondante</string>
 </resources>

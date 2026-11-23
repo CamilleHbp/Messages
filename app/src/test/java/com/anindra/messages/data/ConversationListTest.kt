@@ -35,6 +35,26 @@ class ConversationListTest {
         showArchived: Boolean = false
     ) = ids(ConversationList.sort(list, unreadAtTop, showArchived))
 
+    @Test
+    fun groupTitlesAndContactNamesMatchWithoutLatinAccents() {
+        val group = convo(1, name = "A").copy(groupTitle = "Café des amis")
+        val contact = convo(2, name = "Amélie")
+        val mention = convo(3, snippet = "meet at the cafe")
+
+        assertEquals(listOf(3L, 1L), filter(listOf(mention, group, contact), "cafe"))
+        assertEquals(listOf(2L), filter(listOf(group, contact), "amelie"))
+        assertEquals(listOf(1L, 3L), ids(ConversationList.nameMatchesFirst(listOf(mention, group), "cafe")))
+        assertEquals("", ConversationList.handoffQuery(group, "cafe"))
+        assertEquals("", ConversationList.handoffQuery(contact, "AMELIE"))
+        assertEquals("cafe", ConversationList.handoffQuery(mention, "cafe"))
+    }
+
+    @Test
+    fun nonLatinSpellingKeepsSignificantMarks() {
+        val contact = convo(1, name = "गीत")
+        assertEquals(emptyList<Long>(), filter(listOf(contact), "गत"))
+    }
+
     // --- default ---------------------------------------------------------
 
     @Test

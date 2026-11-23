@@ -36,4 +36,6 @@
     <string name="convo_pinned">Angeheftet</string>
     <string name="convo_unpinned">Losgelöst</string>
     <string name="convo_blocked">Nummer blockiert</string>
+    <string name="conversations_clear_search">Suche löschen</string>
+    <string name="conversations_no_matches">Keine passenden Unterhaltungen</string>
 </resources>
