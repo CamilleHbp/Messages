@@ -72,6 +72,8 @@ object SettingsSearch {
             R.string.settings_import_title)
         card(Route.SETTINGS, 6,
             R.string.settings_advanced_title)
+        card(Route.SETTINGS, 18,
+            R.string.app_check_updates)
 
         card(Route.ADVANCED, 7,
             R.string.settings_drafts_title,

@@ -556,7 +556,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            SettingsGroup {
+            SettingsCard(18) {
                 SettingsRow(
                     title = stringResource(R.string.app_check_updates),
                     subtitle = stringResource(R.string.app_installed_version, com.anindra.messages.BuildConfig.VERSION_NAME, com.anindra.messages.BuildConfig.VERSION_CODE),
