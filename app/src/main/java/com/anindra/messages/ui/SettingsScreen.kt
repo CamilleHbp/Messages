@@ -247,18 +247,6 @@ fun SettingsScreen(
                 )
                 SettingsRow(
                     position = RowPosition.MIDDLE,
-                    title = stringResource(R.string.settings_mark_read_title),
-                    onClick = {
-                        vm.markAllRead()
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.settings_mark_read),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                )
-                SettingsRow(
-                    position = RowPosition.MIDDLE,
                     title = stringResource(R.string.settings_theme_title),
                     subtitle = themeLabel(themeMode, context),
                     onClick = { themeDialog = true }

@@ -369,14 +369,6 @@ fun SettingsScreen(
                     checked = delivery,
                     onChecked = { delivery = it; vm.settings.deliveryReportsEnabled = it }
                 )
-                SettingsRow(
-                    title = stringResource(R.string.settings_mark_read_title),
-                    subtitle = stringResource(R.string.settings_mark_read_subtitle),
-                    onClick = {
-                        vm.markAllRead()
-                        Toast.makeText(context, context.getString(R.string.settings_mark_read), Toast.LENGTH_SHORT).show()
-                    }
-                )
             }
 
             Spacer(Modifier.height(8.dp))

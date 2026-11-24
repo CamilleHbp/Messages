@@ -38,4 +38,9 @@
     <string name="convo_blocked">番号をブロックしました</string>
     <string name="conversations_clear_search">検索をクリア</string>
     <string name="conversations_no_matches">一致する会話はありません</string>
+    <string name="recipient_no_match">「%s」に一致する連絡先はありません</string>
+    <string name="inbox_empty_title">会話はまだありません</string>
+    <string name="archive_empty_title">アーカイブ済みの会話はありません</string>
+    <string name="archive_empty_hint">アーカイブした会話がここに表示されます。</string>
+    <string name="inbox_unread_count">受信トレイの未読の会話：%d 件</string>
 </resources>

@@ -38,4 +38,9 @@
     <string name="convo_blocked">Numer zablokowany</string>
     <string name="conversations_clear_search">Wyczyść wyszukiwanie</string>
     <string name="conversations_no_matches">Brak pasujących rozmów</string>
+    <string name="recipient_no_match">Brak kontaktów pasujących do „%s”</string>
+    <string name="inbox_empty_title">Nie ma jeszcze rozmów</string>
+    <string name="archive_empty_title">Brak zarchiwizowanych rozmów</string>
+    <string name="archive_empty_hint">Tutaj pojawią się zarchiwizowane rozmowy.</string>
+    <string name="inbox_unread_count">Liczba nieprzeczytanych rozmów w skrzynce odbiorczej: %d</string>
 </resources>

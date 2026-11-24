@@ -37,4 +37,9 @@
     <string name="convo_blocked">已屏蔽该号码</string>
     <string name="conversations_clear_search">清除搜索</string>
     <string name="conversations_no_matches">没有匹配的对话</string>
+    <string name="recipient_no_match">没有与“%s”匹配的联系人</string>
+    <string name="inbox_empty_title">暂无对话</string>
+    <string name="archive_empty_title">没有已归档的对话</string>
+    <string name="archive_empty_hint">已归档的对话会显示在这里。</string>
+    <string name="inbox_unread_count">收件箱中的未读对话数：%d</string>
 </resources>

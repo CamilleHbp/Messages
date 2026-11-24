@@ -1588,8 +1588,25 @@ class Repository(private val context: Context) {
         notifyChanged()
     }
 
-    fun markAllReadSuspend() {
-        db.writableDatabase.execSQL("UPDATE conversations SET unread_count=0")
+    fun markInboxRead(confirmed: List<Conversation>) {
+        val database = db.writableDatabase
+        database.beginTransaction()
+        try {
+            database.compileStatement(
+                """UPDATE conversations SET unread_count=0 WHERE id=? AND timestamp=?
+                   AND unread_count=? AND archived=0 AND blocked=0 AND deleted_at=0"""
+            ).use { update ->
+                for (conversation in confirmed) {
+                    update.bindLong(1, conversation.id)
+                    update.bindLong(2, conversation.timestamp)
+                    update.bindLong(3, conversation.unreadCount.toLong())
+                    update.executeUpdateDelete()
+                }
+            }
+            database.setTransactionSuccessful()
+        } finally {
+            database.endTransaction()
+        }
         notifyChanged()
     }
 

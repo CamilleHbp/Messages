@@ -373,7 +373,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun restoreMessage(messageId: Long) =
         scope.launch { repo.restoreMessageSuspend(messageId) }
 
-    fun markAllRead() = scope.launch { repo.markAllReadSuspend() }
+    fun markInboxRead(confirmed: List<Conversation>) {
+        scope.launch { repo.markInboxRead(confirmed) }
+    }
 
     /** Applies FLAG_SECURE immediately so privacy mode toggles without restart. */
     fun setPrivacyMode(activity: Activity, enabled: Boolean) {
