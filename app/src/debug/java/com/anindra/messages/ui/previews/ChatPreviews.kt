@@ -38,6 +38,8 @@ import com.anindra.messages.ui.SimPickerDialog
 import com.anindra.messages.ui.SkeletonMessageRow
 import com.anindra.messages.ui.TextCopyDialog
 import com.anindra.messages.ui.ForwardPicker
+import com.anindra.messages.ui.FailedSendActions
+import com.anindra.messages.ui.theme.MessagesTheme
 import com.anindra.messages.ui.ImagePreview
 import com.anindra.messages.ui.ProvideShimmer
 
@@ -320,4 +322,10 @@ private fun ForwardPickerPreview() {
             onDismiss = {}
         )
     }
+}
+
+@PreviewLightDark
+@Composable
+private fun FailedSendActionsPreview() {
+    MessagesTheme { FailedSendActions({}, {}) }
 }

@@ -32,7 +32,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
                 if (stored != null) {
                     try {
                         SmsSender.send(
-                            context, stored.id, address, body, subId,
+                            context, stored.id, address, body, stored.subId,
                             repo.settings.deliveryReportsEnabled
                         )
                     } catch (_: Exception) {

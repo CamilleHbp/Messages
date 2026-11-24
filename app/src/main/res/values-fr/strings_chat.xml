@@ -101,4 +101,5 @@
     <string name="keep_as_draft">Garder comme brouillon</string>
     <string name="review_recipient">À %1$s</string>
     <string name="draft_one_photo">1 photo</string>
+    <string name="choose_retry_sim">Choisir la SIM</string>
 </resources>

@@ -105,4 +105,5 @@
     <string name="keep_as_draft">الاحتفاظ كمسودة</string>
     <string name="review_recipient">إلى %1$s</string>
     <string name="draft_one_photo">صورة واحدة</string>
+    <string name="choose_retry_sim">اختيار شريحة SIM</string>
 </resources>
