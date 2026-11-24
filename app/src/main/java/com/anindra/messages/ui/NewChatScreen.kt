@@ -75,7 +75,7 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
     val requestContacts = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
-        prefs.edit().putBoolean("asked_contacts", true).apply()
+        prefs.edit().putBoolean("asked_contacts", !granted).apply()
         allowed = granted
         settingsRequired = needsSettings()
         if (granted) vm.reloadContacts()
@@ -86,7 +86,10 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
             if (event == Lifecycle.Event.ON_RESUME) {
                 allowed = hasContactsAccess()
                 settingsRequired = needsSettings()
-                if (allowed) vm.reloadContacts()
+                if (allowed) {
+                    prefs.edit().remove("asked_contacts").apply()
+                    vm.reloadContacts()
+                }
             }
         }
         lifecycle.addObserver(observer)
@@ -141,7 +144,7 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
                 }
                 Spacer(Modifier.height(SettingsLayout.GROUP_GAP))
             }
-            if (!allowed) {
+            if (!allowed && isContactNameQuery(recipient)) {
                 if (settingsRequired) Text(stringResource(R.string.contacts_settings_hint),
                     modifier = Modifier.padding(horizontal = SettingsLayout.SCREEN_PADDING))
                 TextButton(onClick = {
@@ -149,7 +152,7 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
                     else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         Uri.fromParts("package", context.packageName, null)))
                 }) { Text(stringResource(if (settingsRequired) R.string.conversations_open_settings else R.string.recipient_contacts_access)) }
-            } else if (!isPhoneNumber(recipient) && recipient.isNotEmpty() && filtered.isEmpty()) {
+            } else if (allowed && !isPhoneNumber(recipient) && recipient.isNotEmpty() && filtered.isEmpty()) {
                 Text(
                     stringResource(R.string.recipient_no_match, recipient),
                     style = MaterialTheme.typography.bodyMedium,
@@ -190,3 +193,5 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
 
 internal fun contactsNeedSettings(granted: Boolean, previouslyAsked: Boolean, canAskAgain: Boolean) =
     !granted && previouslyAsked && !canAskAgain
+
+internal fun isContactNameQuery(query: String) = query.any(Char::isLetter) && !isPhoneNumber(query)

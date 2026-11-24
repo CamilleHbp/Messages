@@ -958,10 +958,6 @@ class MainActivity : FragmentActivity() {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-            if (Manifest.permission.READ_CONTACTS in grants) {
-                getSharedPreferences("recipient_permissions", MODE_PRIVATE).edit()
-                    .putBoolean("asked_contacts", true).apply()
-            }
             if (grants[Manifest.permission.READ_SMS] == true) {
                 val repo = (application as MessagesApplication).repository
                 if (repo.needsInitialImport) repo.requeryFromSystem()
@@ -1514,8 +1510,7 @@ onOpenAccessibility = { navRoute = "accessibility" },
         val perms = mutableListOf(
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_CONTACTS
+            Manifest.permission.READ_SMS
         )
         if (Build.VERSION.SDK_INT >= 33) perms += Manifest.permission.POST_NOTIFICATIONS
         val needed = perms.filter {
