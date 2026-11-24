@@ -547,7 +547,9 @@ object SmsSender {
 
     suspend fun sendGroup(context: Context, repo: com.anindra.messages.data.Repository, msg: com.anindra.messages.data.Message,
         recipients: List<String>, retry: Boolean = false) {
-        for (target in repo.claimGroupRecipients(msg.id, recipients, retry, msg.subId)) {
+        val eligible = if (retry) msg.recipientSends.filter { it.failed && !repo.isAddressBlocked(it.address) }
+            .map { it.address } else recipients
+        for (target in repo.claimGroupRecipients(msg.id, eligible, retry, msg.subId)) {
             if (repo.isAddressBlocked(target.address) || !send(context, msg.id, target.address, msg.body,
                     msg.subId, repo.settings.deliveryReportsEnabled, target.attempt)) {
                 repo.recordGroupResult(msg.id, target.address, target.attempt, 0, 1, false, false)

@@ -103,4 +103,8 @@
     <string name="draft_one_photo">1 张照片</string>
     <string name="choose_retry_sim">选择 SIM 卡</string>
     <string name="retry_failed">重发失败项</string>
+    <string name="group_details_expanded">已展开收件人详情</string>
+    <string name="group_details_collapsed">已收起收件人详情</string>
+    <string name="group_no_service">无移动网络服务</string>
+    <string name="group_radio_off">移动通信已关闭</string>
 </resources>

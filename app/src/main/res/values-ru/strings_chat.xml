@@ -107,4 +107,8 @@
     <string name="draft_one_photo">1 фото</string>
     <string name="choose_retry_sim">Выбрать SIM</string>
     <string name="retry_failed">Повторить неудачные</string>
+    <string name="group_details_expanded">Сведения о получателях развёрнуты</string>
+    <string name="group_details_collapsed">Сведения о получателях свёрнуты</string>
+    <string name="group_no_service">Нет мобильной сети</string>
+    <string name="group_radio_off">Модуль сотовой связи выключен</string>
 </resources>

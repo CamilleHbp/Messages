@@ -107,4 +107,8 @@
     <string name="draft_one_photo">1 zdjęcie</string>
     <string name="choose_retry_sim">Wybierz kartę SIM</string>
     <string name="retry_failed">Ponów nieudane</string>
+    <string name="group_details_expanded">Szczegóły odbiorców rozwinięte</string>
+    <string name="group_details_collapsed">Szczegóły odbiorców zwinięte</string>
+    <string name="group_no_service">Brak sieci komórkowej</string>
+    <string name="group_radio_off">Moduł sieci komórkowej wyłączony</string>
 </resources>

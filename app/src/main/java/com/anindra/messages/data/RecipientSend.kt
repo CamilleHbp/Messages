@@ -9,7 +9,8 @@ data class RecipientSend(
     val parts: Int = 1,
     val sent: Set<Int> = emptySet(),
     val delivered: Set<Int> = emptySet(),
-    val failed: Boolean = false
+    val failed: Boolean = false,
+    val failureReason: String = ""
 ) {
     val status: String get() = when {
         failed -> "failed"
@@ -18,13 +19,15 @@ data class RecipientSend(
         else -> "sending"
     }
 
-    fun result(generation: Int, part: Int, count: Int, receipt: Boolean, ok: Boolean): RecipientSend {
+    fun result(generation: Int, part: Int, count: Int, receipt: Boolean, ok: Boolean, reason: String = ""): RecipientSend {
         if (attempt != generation || part !in 0 until count || failed) return this
-        if (!ok) return if (receipt || part in sent) this else copy(failed = true)
+        if (!ok) return if (receipt || part in sent) this else copy(failed = true, failureReason = reason)
         return copy(parts = count, sent = sent + part, delivered = if (receipt) delivered + part else delivered)
     }
 
     companion object {
+        fun displayOrder(rows: List<RecipientSend>) = rows.sortedByDescending { it.failed }
+
         fun aggregate(rows: List<RecipientSend>): String = when {
             rows.all { it.status == "delivered" } -> "delivered"
             rows.all { it.failed } -> "failed"
@@ -35,6 +38,7 @@ data class RecipientSend(
 
         fun encode(rows: List<RecipientSend>): String = JSONArray().apply {
             rows.forEach { r -> put(JSONObject().apply {
+                if (r.failureReason.isNotEmpty()) put("reason", r.failureReason)
                 put("address", r.address); put("attempt", r.attempt); put("parts", r.parts)
                 put("sent", JSONArray(r.sent)); put("delivered", JSONArray(r.delivered)); put("failed", r.failed)
             }) }
@@ -47,7 +51,7 @@ data class RecipientSend(
             return List(array.length()) { i ->
                 val obj = array.getJSONObject(i)
                 RecipientSend(obj.getString("address"), obj.getInt("attempt"), obj.getInt("parts"),
-                    indices(obj.getJSONArray("sent")), indices(obj.getJSONArray("delivered")), obj.getBoolean("failed"))
+                    indices(obj.getJSONArray("sent")), indices(obj.getJSONArray("delivered")), obj.getBoolean("failed"), obj.optString("reason"))
             }
         }
     }

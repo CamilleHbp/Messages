@@ -107,4 +107,8 @@
     <string name="draft_one_photo">1 फ़ोटो</string>
     <string name="choose_retry_sim">सिम चुनें</string>
     <string name="retry_failed">विफल संदेश फिर भेजें</string>
+    <string name="group_details_expanded">प्राप्तकर्ता विवरण विस्तृत</string>
+    <string name="group_details_collapsed">प्राप्तकर्ता विवरण संक्षिप्त</string>
+    <string name="group_no_service">मोबाइल सेवा उपलब्ध नहीं है</string>
+    <string name="group_radio_off">मोबाइल रेडियो बंद है</string>
 </resources>

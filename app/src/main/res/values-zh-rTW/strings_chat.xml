@@ -103,4 +103,8 @@
     <string name="draft_one_photo">1 張相片</string>
     <string name="choose_retry_sim">選擇 SIM 卡</string>
     <string name="retry_failed">重傳失敗項目</string>
+    <string name="group_details_expanded">已展開收件人詳細資料</string>
+    <string name="group_details_collapsed">已收合收件人詳細資料</string>
+    <string name="group_no_service">無行動網路服務</string>
+    <string name="group_radio_off">行動通訊已關閉</string>
 </resources>

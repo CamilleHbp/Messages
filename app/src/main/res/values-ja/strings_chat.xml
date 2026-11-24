@@ -107,4 +107,8 @@
     <string name="draft_one_photo">写真1枚</string>
     <string name="choose_retry_sim">SIM を選択</string>
     <string name="retry_failed">失敗した宛先に再送</string>
+    <string name="group_details_expanded">宛先の詳細を表示中</string>
+    <string name="group_details_collapsed">宛先の詳細を折りたたみ中</string>
+    <string name="group_no_service">圏外</string>
+    <string name="group_radio_off">携帯通信がオフ</string>
 </resources>

@@ -16,6 +16,14 @@ class RecipientSendTest {
         assertEquals("delivered", sent.result(2, 0, 2, true, true).status)
     }
 
+    @Test fun failedRecipientsComeFirstAndKeepTheirCause() {
+        val sent = RecipientSend("111").result(1, 0, 1, false, true)
+        val failed = RecipientSend("222").result(1, 0, 1, false, false, "no_service")
+        assertEquals("no_service", failed.failureReason)
+        assertEquals(listOf(failed, sent), RecipientSend.displayOrder(listOf(sent, failed)))
+        assertEquals("", sent.result(1, 0, 1, true, false, "radio_off").failureReason)
+    }
+
     @Test fun oneFailedRecipientDoesNotEraseAnotherRecipientsResult() {
         val sent = RecipientSend("111").result(1, 0, 1, false, true)
         val failed = RecipientSend("222").result(1, 0, 1, false, false)

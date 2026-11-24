@@ -107,4 +107,8 @@
     <string name="draft_one_photo">صورة واحدة</string>
     <string name="choose_retry_sim">اختيار شريحة SIM</string>
     <string name="retry_failed">إعادة محاولة الإرسال الفاشل</string>
+    <string name="group_details_expanded">تفاصيل المستلمين موسّعة</string>
+    <string name="group_details_collapsed">تفاصيل المستلمين مطوية</string>
+    <string name="group_no_service">لا توجد خدمة خلوية</string>
+    <string name="group_radio_off">الاتصال الخلوي متوقف</string>
 </resources>

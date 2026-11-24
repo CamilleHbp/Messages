@@ -103,4 +103,8 @@
     <string name="draft_one_photo">1 photo</string>
     <string name="choose_retry_sim">Choisir la SIM</string>
     <string name="retry_failed">Réessayer les échecs</string>
+    <string name="group_details_expanded">Détails des destinataires affichés</string>
+    <string name="group_details_collapsed">Détails des destinataires masqués</string>
+    <string name="group_no_service">Aucun réseau mobile</string>
+    <string name="group_radio_off">Radio mobile désactivée</string>
 </resources>

@@ -41,10 +41,15 @@ class SmsStatusReceiver : BroadcastReceiver() {
                     )
                     intent.hasExtra("recipient") && action in setOf(ACTION_SMS_SENT, ACTION_SMS_DELIVERED) -> {
                         val address = intent.getStringExtra("recipient") ?: return@launch
+                        val reason = when (resultCodeSnapshot) {
+                            android.telephony.SmsManager.RESULT_ERROR_NO_SERVICE -> "no_service"
+                            android.telephony.SmsManager.RESULT_ERROR_RADIO_OFF -> "radio_off"
+                            else -> ""
+                        }
                         val mirror = repo.recordGroupResult(messageId, address, intent.getIntExtra("attempt", 0),
                             intent.getIntExtra("part", -1), intent.getIntExtra("count", 0),
                             action == ACTION_SMS_DELIVERED, resultCodeSnapshot == Activity.RESULT_OK &&
-                                (action != ACTION_SMS_DELIVERED || confirmsDelivery(intent)))
+                                (action != ACTION_SMS_DELIVERED || confirmsDelivery(intent)), reason)
                         if (mirror) repo.messageByIdSuspend(messageId)?.let {
                             repo.writeSentToSystem(address, it.body, it.subId, messageId)
                         }

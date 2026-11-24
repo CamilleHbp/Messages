@@ -265,22 +265,55 @@ internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) 
 @Composable
 internal fun GroupSendActions(rows: List<RecipientSend>, onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val app = LocalContext.current.applicationContext as? com.anindra.messages.MessagesApplication
+    var names by remember(rows) { mutableStateOf(emptyMap<String, String?>()) }
+    var blocked by remember(rows) { mutableStateOf(emptySet<String>()) }
+    var revision by remember { mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        revision++
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(rows, expanded, revision) {
+        val repo = app?.repository ?: return@LaunchedEffect
+        if (!expanded && rows.none { it.failed }) return@LaunchedEffect
+        val details = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val blockedAddresses = rows.filter { it.failed && repo.isAddressBlocked(it.address) }.map { it.address }.toSet()
+            val contactNames = if (expanded) rows.associate { it.address to repo.contactNameFor(it.address) } else emptyMap()
+            blockedAddresses to contactNames
+        }
+        blocked = details.first
+        names = details.second
+    }
     val labels = mapOf(
         "sent" to stringResource(R.string.message_status_sent),
         "delivered" to stringResource(R.string.message_status_delivered),
         "failed" to stringResource(R.string.transfer_log_status_failed),
         "sending" to stringResource(R.string.status_sending)
     )
-    val summary = labels.mapNotNull { (state, label) ->
-        rows.count { it.status == state }.takeIf { it > 0 }?.let { "$it $label" }
-    }.joinToString(" · ")
+    val counts = labels.mapNotNull { (state, label) ->
+        val count = rows.count { it.status == state && it.address !in blocked }
+        if (count > 0) "$count $label" else null
+    }
+    val blockedLabel = if (blocked.isEmpty()) null else "${blocked.size} ${stringResource(R.string.access_blocked)}"
+    val summary = (counts + listOfNotNull(blockedLabel)).joinToString(" · ")
+    val disclosure = stringResource(if (expanded) R.string.group_details_expanded else R.string.group_details_collapsed)
     Column {
-        TextButton(onClick = { expanded = !expanded }) { Text(summary) }
-        if (expanded) rows.forEach { row ->
-            Text("${BidiText.ltr(formatPhoneNumber(row.address))} · ${labels[row.status]}",
+        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.semantics { stateDescription = disclosure }) {
+            Text(summary, Modifier.weight(1f, fill = false))
+            Icon(if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, contentDescription = null)
+        }
+        if (expanded) RecipientSend.displayOrder(rows).forEach { row ->
+            val status = when {
+                row.address in blocked -> stringResource(R.string.access_blocked)
+                row.failed && row.failureReason == "no_service" -> stringResource(R.string.group_no_service)
+                row.failed && row.failureReason == "radio_off" -> stringResource(R.string.group_radio_off)
+                else -> labels[row.status]
+            }
+            val number = BidiText.ltr(formatPhoneNumber(row.address))
+            Text(listOfNotNull(names[row.address]?.takeUnless { it == row.address }, number, status).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall)
         }
-        if (rows.any { it.failed }) {
+        if (rows.any { it.failed && it.address !in blocked }) {
             androidx.compose.foundation.layout.FlowRow {
                 TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.retry_failed))

@@ -107,4 +107,8 @@
     <string name="draft_one_photo">사진 1장</string>
     <string name="choose_retry_sim">SIM 선택</string>
     <string name="retry_failed">실패한 항목 다시 보내기</string>
+    <string name="group_details_expanded">수신자 세부정보 펼쳐짐</string>
+    <string name="group_details_collapsed">수신자 세부정보 접힘</string>
+    <string name="group_no_service">모바일 서비스 없음</string>
+    <string name="group_radio_off">모바일 무선 기능 꺼짐</string>
 </resources>

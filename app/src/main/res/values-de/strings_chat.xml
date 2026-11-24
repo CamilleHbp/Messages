@@ -107,4 +107,8 @@
     <string name="draft_one_photo">1 Foto</string>
     <string name="choose_retry_sim">SIM auswählen</string>
     <string name="retry_failed">Fehlgeschlagene erneut senden</string>
+    <string name="group_details_expanded">Empfängerdetails ausgeklappt</string>
+    <string name="group_details_collapsed">Empfängerdetails eingeklappt</string>
+    <string name="group_no_service">Kein Mobilfunknetz</string>
+    <string name="group_radio_off">Mobilfunk ausgeschaltet</string>
 </resources>

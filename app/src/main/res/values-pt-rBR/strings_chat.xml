@@ -107,4 +107,8 @@
     <string name="draft_one_photo">1 foto</string>
     <string name="choose_retry_sim">Escolher SIM</string>
     <string name="retry_failed">Reenviar para quem falhou</string>
+    <string name="group_details_expanded">Detalhes dos destinatários expandidos</string>
+    <string name="group_details_collapsed">Detalhes dos destinatários recolhidos</string>
+    <string name="group_no_service">Sem sinal de celular</string>
+    <string name="group_radio_off">Rádio celular desligado</string>
 </resources>
