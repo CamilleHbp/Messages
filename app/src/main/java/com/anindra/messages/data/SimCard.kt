@@ -36,8 +36,12 @@ object SimCards {
     fun isOverridden(): Boolean = debugOverride != null
 
     /** Active subscriptions, or the debug fake when enabled. Never throws. */
-    fun load(context: Context): List<SimCard> {
+    fun load(context: Context): List<SimCard> = knownActive(context).orEmpty()
+
+    internal fun knownActive(context: Context): List<SimCard>? {
         debugOverride?.let { return it }
+        if (context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) return null
         return try {
             context.getSystemService(SubscriptionManager::class.java)
                 ?.activeSubscriptionInfoList
@@ -52,12 +56,12 @@ object SimCards {
                         embedded = it.isEmbedded,
                         number = ownNumber(it)
                     )
-                } ?: emptyList()
+                }
         } catch (_: SecurityException) {
             // READ_PHONE_STATE denied; show no SIMs rather than crashing.
-            emptyList()
+            null
         } catch (_: Exception) {
-            emptyList()
+            null
         }
     }
 

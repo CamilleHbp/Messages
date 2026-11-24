@@ -105,4 +105,10 @@
     <string name="keep_as_draft">下書きとして保存</string>
     <string name="review_recipient">宛先：%1$s</string>
     <string name="draft_one_photo">写真1枚</string>
+    <string name="review_members">宛先 %d 件</string>
+    <string name="missing_review_photo">%2$d 枚中 %1$d 枚目の写真は利用できません</string>
+    <string name="replace_review_photo">置き換え</string>
+    <string name="remove_review_photo">削除</string>
+    <string name="review_sim_inactive">選択した SIM は無効です。</string>
+    <string name="choose_retry_sim">SIM を選択</string>
 </resources>

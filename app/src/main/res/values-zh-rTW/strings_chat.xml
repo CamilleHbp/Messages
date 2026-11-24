@@ -101,4 +101,10 @@
     <string name="keep_as_draft">保留為草稿</string>
     <string name="review_recipient">收件人：%1$s</string>
     <string name="draft_one_photo">1 張相片</string>
+    <string name="review_members">%d 位收件人</string>
+    <string name="missing_review_photo">第 %1$d 張相片無法使用（共 %2$d 張）</string>
+    <string name="replace_review_photo">取代</string>
+    <string name="remove_review_photo">移除</string>
+    <string name="review_sim_inactive">所選 SIM 卡已停用。</string>
+    <string name="choose_retry_sim">選擇 SIM 卡</string>
 </resources>

@@ -548,6 +548,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    internal fun editReview(id: Long, previous: ComposerRecord, next: ComposerRecord) {
+        if (previous.state == ComposerState.REVIEW && compositions[id] == previous) persist(id, next)
+    }
+
     internal fun confirmReviewedSend(id: Long, reviewed: ComposerRecord) {
         if (reviewed.state == ComposerState.REVIEW && compositions[id] == reviewed) dispatchComposer(id, reviewed)
     }

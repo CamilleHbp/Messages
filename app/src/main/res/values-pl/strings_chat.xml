@@ -105,4 +105,10 @@
     <string name="keep_as_draft">Zachowaj jako szkic</string>
     <string name="review_recipient">Do: %1$s</string>
     <string name="draft_one_photo">1 zdjęcie</string>
+    <string name="review_members">Liczba odbiorców: %d</string>
+    <string name="missing_review_photo">Zdjęcie %1$d z %2$d jest niedostępne</string>
+    <string name="replace_review_photo">Zastąp</string>
+    <string name="remove_review_photo">Usuń</string>
+    <string name="review_sim_inactive">Wybrana karta SIM jest nieaktywna.</string>
+    <string name="choose_retry_sim">Wybierz kartę SIM</string>
 </resources>
