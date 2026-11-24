@@ -36,4 +36,5 @@
     <string name="convo_pinned">Закреплено</string>
     <string name="convo_unpinned">Закрепление снято</string>
     <string name="convo_blocked">Номер заблокирован</string>
+    <string name="cancel_send_seconds">%1$s · %2$d с</string>
 </resources>

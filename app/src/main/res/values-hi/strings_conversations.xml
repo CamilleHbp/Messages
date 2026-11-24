@@ -36,4 +36,5 @@
     <string name="convo_pinned">पिन किया गया</string>
     <string name="convo_unpinned">पिन हटाया गया</string>
     <string name="convo_blocked">नंबर अवरुद्ध किया गया</string>
+    <string name="cancel_send_seconds">%1$s · %2$d से</string>
 </resources>

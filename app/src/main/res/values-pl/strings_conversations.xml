@@ -36,4 +36,5 @@
     <string name="convo_pinned">Przypięto</string>
     <string name="convo_unpinned">Odpięto</string>
     <string name="convo_blocked">Numer zablokowany</string>
+    <string name="cancel_send_seconds">%1$s · %2$d s</string>
 </resources>

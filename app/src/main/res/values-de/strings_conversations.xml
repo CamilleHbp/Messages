@@ -36,4 +36,5 @@
     <string name="convo_pinned">Angeheftet</string>
     <string name="convo_unpinned">Losgelöst</string>
     <string name="convo_blocked">Nummer blockiert</string>
+    <string name="cancel_send_seconds">%1$s · %2$d s</string>
 </resources>

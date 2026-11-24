@@ -36,4 +36,5 @@
     <string name="convo_pinned">ピン留めしました</string>
     <string name="convo_unpinned">ピンを外しました</string>
     <string name="convo_blocked">番号をブロックしました</string>
+    <string name="cancel_send_seconds">%1$s · %2$d 秒</string>
 </resources>

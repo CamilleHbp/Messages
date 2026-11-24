@@ -36,4 +36,5 @@
     <string name="convo_pinned">تم التثبيت</string>
     <string name="convo_unpinned">تم إلغاء التثبيت</string>
     <string name="convo_blocked">تم حظر الرقم</string>
+    <string name="cancel_send_seconds">%1$s · %2$d ث</string>
 </resources>

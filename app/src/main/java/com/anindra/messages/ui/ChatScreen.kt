@@ -2850,9 +2850,10 @@ internal fun InputBar(
         val canSend = isPending || draft.isNotBlank() || hasAttachments
         val actionLabel = stringResource(if (isPending) R.string.chat_cancel else R.string.icon_send)
         val countdownLabel = if (isPending) stringResource(R.string.chat_sending_countdown, sendCountdown) else ""
+        val actionSize = if (isPending) Modifier.heightIn(min = 48.dp) else Modifier.size(48.dp)
         Box(
-            Modifier
-                .size(48.dp)
+            actionSize
+                .clip(CircleShape)
                 .background(
                     if (canSend) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
@@ -2872,19 +2873,12 @@ internal fun InputBar(
             contentAlignment = Alignment.Center
         ) {
             if (isPending) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = String.format("%d", sendCountdown),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Icon(
-                        Icons.Rounded.Close, null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
+                Text(
+                    stringResource(R.string.cancel_send_seconds, actionLabel, sendCountdown),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             } else {
                 Icon(
                     Icons.AutoMirrored.Rounded.Send, null,
