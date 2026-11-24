@@ -160,4 +160,6 @@
     <string name="settings_scheduled_manage_title">予約済みメッセージを管理</string>
     <string name="settings_search_hint">設定を検索</string>
     <string name="settings_search_none">一致する設定がありません</string>
+    <string name="send_delay">送信の待ち時間</string>
+    <string name="send_delay_off">オフ</string>
 </resources>

@@ -160,4 +160,6 @@
     <string name="settings_scheduled_manage_title">Gérer les messages planifiés</string>
     <string name="settings_search_hint">Paramètres de recherche</string>
     <string name="settings_search_none">Aucun paramètre ne correspond</string>
+    <string name="send_delay">Délai d’envoi</string>
+    <string name="send_delay_off">Désactivé</string>
 </resources>

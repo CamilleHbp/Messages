@@ -45,7 +45,7 @@ class PendingMediaWiringTest {
     fun theComposerOffersSendWhenAPictureIsWaiting() {
         assertTrue(
             "the composer must be told an attachment is waiting",
-            chat.contains("hasAttachments = pendingMedia.isNotEmpty()"),
+            chat.contains("hasAttachments = visibleMedia.isNotEmpty()"),
         )
         assertTrue(
             "the send button must enable for an attachment with no text",
@@ -61,11 +61,11 @@ class PendingMediaWiringTest {
     fun sendPublishesTheStagedPictures() {
         assertTrue(
             "there must be a function that sends the staged media",
-            chat.contains("fun sendPendingMedia()"),
+            chat.contains("vm.submitMessage(conversationId, draft, pendingMedia.toList(), currentSimId)"),
         )
         assertTrue(
             "the draft must ride as the first picture's caption",
-            chat.contains("vm.sendMediaMessage(conversationId, uri, if (index == 0) caption else \"\")"),
+            locate("MainActivity.kt").contains("sendMediaMessage(id, uri, if (index == 0) caption else \"\", simId)"),
         )
     }
 
@@ -73,7 +73,7 @@ class PendingMediaWiringTest {
     fun eachPictureCanBeRemovedBeforeSending() {
         assertTrue(
             "each staged picture must offer a remove control",
-            Regex("pendingMedia\\.forEach[\\s\\S]{0,1200}?pendingMedia\\.remove\\(uri\\)").containsMatchIn(chat),
+            Regex("visibleMedia\\.forEach[\\s\\S]{0,1200}?pendingMedia\\.remove\\(uri\\)").containsMatchIn(chat),
         )
     }
 

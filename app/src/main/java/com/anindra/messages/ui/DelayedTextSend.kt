@@ -1,19 +1,17 @@
 package com.anindra.messages.ui
 
 internal class DelayedTextSend {
-    data class Pending(val draft: String, val simId: Int, val deadlineMillis: Long) {
+    data class Pending(val draft: String, val simId: Int, val deadlineMillis: Long, val media: List<String>) {
         val body: String get() = draft.trim()
-
-        fun draftAfterSending(currentDraft: String): String =
-            if (currentDraft == draft) "" else currentDraft
     }
 
-    private var pending: Pending? = null
+    var pending: Pending? = null
+        private set
     val isPending: Boolean get() = pending != null
 
-    fun start(draft: String, simId: Int, delaySeconds: Int, nowMillis: Long): Boolean {
-        if (pending != null || draft.isBlank()) return false
-        pending = Pending(draft, simId, nowMillis + delaySeconds.coerceAtLeast(1) * 1000L)
+    fun start(draft: String, simId: Int, delaySeconds: Int, nowMillis: Long, media: List<String> = emptyList()): Boolean {
+        if (pending != null || (draft.isBlank() && media.isEmpty())) return false
+        pending = Pending(draft, simId, nowMillis + delaySeconds.coerceAtLeast(1) * 1000L, media.toList())
         return true
     }
 

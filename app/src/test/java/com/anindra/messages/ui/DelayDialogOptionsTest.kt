@@ -21,16 +21,8 @@ class DelayDialogOptionsTest {
             ?: error("app/src/main not found")
     }
 
-    private val inboxScreen: String by lazy {
-        File(main, "java/com/anindra/messages/ui/InboxSettingsScreen.kt").readText()
-    }
-
-    private val delayDialog: String by lazy {
-        val start = inboxScreen.indexOf("if (delayDialog) {")
-        assertTrue("delay dialog block not found in InboxSettingsScreen", start >= 0)
-        val end = inboxScreen.indexOf("R.string.common_cancel", start)
-        assertTrue("could not find the end of the delay dialog block", end > start)
-        inboxScreen.substring(start, end)
+    private val delayDialog by lazy {
+        File(main, "java/com/anindra/messages/ui/SendDelayDialog.kt").readText()
     }
 
     @Test
@@ -49,7 +41,7 @@ class DelayDialogOptionsTest {
     fun everyDelayOptionIsOffered() {
         assertTrue(
             "the 1/3/5/10/30 s choices must all be listed",
-            delayDialog.contains("listOf(1, 3, 5, 10, 30)")
+            delayDialog.contains("listOf(0, 1, 3, 5, 10, 30)")
         )
         assertTrue(
             "each choice must render its seconds label",
@@ -69,7 +61,7 @@ class DelayDialogOptionsTest {
     fun theWholeRowSelectsTheOption() {
         assertTrue(
             "tapping the row, not only the radio, must pick the delay",
-            delayDialog.contains(".clickable")
+            delayDialog.contains(".selectable(")
         )
     }
 }

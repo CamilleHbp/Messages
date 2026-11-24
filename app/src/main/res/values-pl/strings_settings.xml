@@ -160,4 +160,6 @@
     <string name="settings_scheduled_manage_title">Zarządzaj zaplanowanymi wiadomościami</string>
     <string name="settings_search_hint">Szukaj w ustawieniach</string>
     <string name="settings_search_none">Żadne ustawienie nie pasuje</string>
+    <string name="send_delay">Opóźnienie wysyłania</string>
+    <string name="send_delay_off">Wyłączone</string>
 </resources>

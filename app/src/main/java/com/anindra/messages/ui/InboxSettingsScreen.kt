@@ -2,7 +2,6 @@ package com.anindra.messages.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Cancel
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +31,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,9 +83,6 @@ fun InboxSettingsScreen(
     var pickingDirection by remember { mutableStateOf<SwipeDirection?>(null) }
     var unreadAtTop by remember(revision) { mutableStateOf(vm.settings.unreadAtTopEnabled) }
     var forwarding by remember(revision) { mutableStateOf(vm.settings.forwardingEnabled) }
-    var delayed by remember(revision) { mutableStateOf(vm.settings.delayedSendingEnabled) }
-    var delaySeconds by remember(revision) { mutableIntStateOf(vm.settings.delaySeconds) }
-    var delayDialog by remember { mutableStateOf(false) }
     var showBlocked by remember { mutableStateOf(false) }
     val blockedNumbers by vm.blockedNumbers().collectAsState(initial = emptyList())
 
@@ -155,35 +149,16 @@ fun InboxSettingsScreen(
                     onChecked = { forwarding = it; vm.settings.forwardingEnabled = it }
                 )
                 SettingsRow(
-                    position = RowPosition.MIDDLE,
+                    position = RowPosition.LAST,
                     title = stringResource(R.string.settings_blocking_title),
                     subtitle = context.getString(
                         R.string.settings_blocked_numbers_count, blockedNumbers.size
                     ),
                     onClick = { showBlocked = true }
                 )
-                SettingsRow(
-                    position = if (delayed) RowPosition.MIDDLE else RowPosition.LAST,
-                    title = stringResource(R.string.settings_delayed_title),
-                    checked = delayed,
-                    onChecked = {
-                        delayed = it; vm.settings.delayedSendingEnabled = it
-                        if (it) delayDialog = true
-                    }
-                )
-                if (delayed) {
-                    SettingsRow(
-                        position = RowPosition.LAST,
-                        title = stringResource(R.string.settings_delay_secs_title),
-                        subtitle = String.format(
-                            context.getString(R.string.settings_delay_with_value), delaySeconds
-                        ),
-                        onClick = { delayDialog = true }
-                    )
-                }
+
             }
 
-            SettingsFooter(stringResource(R.string.settings_inbox_footer))
         }
     }
 
@@ -243,53 +218,7 @@ fun InboxSettingsScreen(
         )
     }
 
-    if (delayDialog) {
-        val options = listOf(1, 3, 5, 10, 30)
-        AlertDialog(
-            onDismissRequest = { delayDialog = false },
-            title = { Text(stringResource(R.string.settings_pin_delay)) },
-            text = {
-                Column {
-                    Text(
-                        stringResource(R.string.settings_choose_delay),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    options.forEach { secs ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    delaySeconds = secs
-                                    vm.settings.delaySeconds = secs
-                                    delayDialog = false
-                                }
-                                .heightIn(min = A11y.MIN_TOUCH_DP.dp)
-                        ) {
-                            RadioButton(
-                                selected = delaySeconds == secs,
-                                onClick = {
-                                    delaySeconds = secs
-                                    vm.settings.delaySeconds = secs
-                                    delayDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.settings_countdown_placeholder, secs)
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { delayDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            }
-        )
-    }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

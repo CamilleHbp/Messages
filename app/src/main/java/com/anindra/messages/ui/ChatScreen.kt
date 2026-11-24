@@ -3,7 +3,6 @@ package com.anindra.messages.ui
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
-import android.os.SystemClock
 import android.provider.ContactsContract
 import android.telephony.SubscriptionManager
 import android.widget.Toast
@@ -713,7 +712,7 @@ fun ChatScreen(
     var attachSheet by remember { mutableStateOf(false) }
     // Picked media waits here until the user sends it, so a picture can be
     // explained or dropped before it leaves — it is no longer sent on pick.
-    val pendingMedia = remember { mutableStateListOf<Uri>() }
+    val pendingMedia = remember(conversationId) { mutableStateListOf<Uri>() }
 
     val selectedMessageIds = remember { mutableStateListOf<Long>() }
     var textCopyMessage by remember { mutableStateOf<Message?>(null) }
@@ -742,35 +741,23 @@ fun ChatScreen(
     var detailsMessage by remember { mutableStateOf<Message?>(null) }
     var previewImageUri by remember { mutableStateOf<String?>(null) }
 
-    val delayedSend = remember(conversationId) { DelayedTextSend() }
-    var sendCountdown by remember(conversationId) { mutableIntStateOf(0) }
+    val pending = vm.pendingSend(conversationId)
+    val sendCountdown = vm.sendCountdowns[conversationId] ?: 0
+    val visibleMedia = pending?.media?.map(Uri::parse) ?: pendingMedia
+    fun cancelDelayedSend() {
+        val canceled = vm.cancelSend(conversationId) ?: return
+        draftEdited = true
+        currentSimId = canceled.simId
+        draft = canceled.draft
+        pendingMedia.clear()
+        pendingMedia.addAll(canceled.media.map(Uri::parse))
+    }
 
     var showSchedulePicker by remember { mutableStateOf(false) }
     var scheduleStep by remember { mutableStateOf("date") }
     var scheduledDateMillis by remember { mutableStateOf<Long?>(null) }
     var scheduledHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
     var scheduledMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
-
-    var sendAttempt by remember(conversationId) { mutableIntStateOf(0) }
-    fun cancelDelayedSend() {
-        if (!delayedSend.isPending) return
-        delayedSend.cancel()
-        sendCountdown = 0
-        sendAttempt++
-    }
-    LaunchedEffect(sendAttempt, conversationId) {
-        if (!delayedSend.isPending) return@LaunchedEffect
-        while (delayedSend.remainingSeconds(SystemClock.elapsedRealtime()) > 0) {
-            sendCountdown = delayedSend.remainingSeconds(SystemClock.elapsedRealtime())
-            delay(delayedSend.millisUntilNextTick(SystemClock.elapsedRealtime()))
-        }
-        val pending = delayedSend.takeIfDue(SystemClock.elapsedRealtime()) ?: return@LaunchedEffect
-        sendCountdown = 0
-        vm.send(conversationId, pending.body, pending.simId)
-        draft = pending.draftAfterSending(draft)
-        vm.saveDraft(conversationId, draft)
-        showEmoji = false
-    }
 
     // SIM management
     var retryingMessageId by remember { mutableStateOf(-1L) }
@@ -836,28 +823,8 @@ fun ChatScreen(
     }
 
     fun leaveChat() {
-        vm.saveDraftAndMaybeTrash(conversationId, draft.trim())
+        if (vm.pendingSend(conversationId) == null) vm.saveDraftAndMaybeTrash(conversationId, draft.trim())
         onBack()
-    }
-
-    /** Sends the pictures waiting in the composer. The draft rides along as
-     *  the first picture's caption, which is how a text+photo message is sent. */
-    fun sendPendingMedia() {
-        if (pendingMedia.isEmpty()) return
-        val addr = convo?.address ?: ""
-        if (vm.isNumberBlocked(addr)) {
-            showBlockedDialog = true
-            return
-        }
-        if (addr.isBlank()) return
-        val caption = draft.trim()
-        pendingMedia.toList().forEachIndexed { index, uri ->
-            vm.sendMediaMessage(conversationId, uri, if (index == 0) caption else "")
-        }
-        pendingMedia.clear()
-        draft = ""
-        vm.saveDraft(conversationId, "")
-        showEmoji = false
     }
 
     fun toggleSelection(id: Long) {
@@ -1174,17 +1141,17 @@ fun ChatScreen(
     DisposableEffect(conversationId) {
         onDispose { vm.setViewedConversation(0L) }
     }
-    // Content handed over by an external share, handled in one effect so the text
-    // and the media are read from the same composition. Sharing text with an
-    // image makes the text that image's caption, not a second message, so it is
-    // never also left in the composer. Both are cleared through the consume
-    // callbacks, which re-runs this effect with nothing to do.
     LaunchedEffect(conversationId, initialDraft, initialMedia) {
         if (initialMedia.isNotEmpty()) {
-            initialMedia.forEach { vm.sendMediaMessage(conversationId, it, initialDraft) }
+            cancelDelayedSend()
+            initialMedia.filter { it !in pendingMedia }.forEach { pendingMedia.add(it) }
+            draft = initialDraft
+            draftEdited = true
             onInitialMediaConsumed()
             onInitialDraftConsumed()
         } else if (initialDraft.isNotBlank()) {
+            cancelDelayedSend()
+            draftEdited = true
             draft = initialDraft
             onInitialDraftConsumed()
         }
@@ -1194,7 +1161,8 @@ fun ChatScreen(
     }
     LaunchedEffect(convo) {
         if (convo != null && !draftLoaded) {
-            draft = ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
+            draft = if (vm.pendingSend(conversationId) != null) ""
+            else ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
             draftLoaded = true
             numberIsBlocked = vm.isNumberBlocked(convo!!.address)
         }
@@ -1360,7 +1328,7 @@ fun ChatScreen(
                         }
                     }
                 }
-                if (pendingMedia.isNotEmpty()) {
+                if (visibleMedia.isNotEmpty()) {
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -1368,7 +1336,7 @@ fun ChatScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        pendingMedia.forEach { uri ->
+                        visibleMedia.forEach { uri ->
                             Box(Modifier.size(72.dp)) {
                                 coil3.compose.AsyncImage(
                                     model = uri,
@@ -1385,7 +1353,7 @@ fun ChatScreen(
                                         .size(22.dp)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                        .clickable { pendingMedia.remove(uri) },
+                                        .clickable { cancelDelayedSend(); pendingMedia.remove(uri) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1402,13 +1370,13 @@ fun ChatScreen(
                 val chatAddress = convo?.address ?: ""
                 if (chatAddress.isBlank() || isPhoneNumber(chatAddress)) {
                     InputBar(
-                        draft = draft,
+                        draft = pending?.draft ?: draft,
                         placeholder = stringResource(R.string.text_placeholder),
                         sims = sims,
-                        currentSimId = currentSimId,
+                        currentSimId = pending?.simId ?: currentSimId,
                         onCycleSim = { cycleSim() },
                         onDraftChange = {
-                            if (it != draft) {
+                            if (it != (pending?.draft ?: draft)) {
                                 cancelDelayedSend()
                                 draftEdited = true
                             }
@@ -1416,33 +1384,18 @@ fun ChatScreen(
                         },
                         sendCountdown = sendCountdown,
                         onCancelSend = ::cancelDelayedSend,
-                        hasAttachments = pendingMedia.isNotEmpty(),
+                        hasAttachments = visibleMedia.isNotEmpty(),
                         onSend = {
-                            if (pendingMedia.isNotEmpty()) {
-                                sendPendingMedia()
-                            } else {
-                                val text = draft.trim()
-                                if (text.isNotEmpty()) {
-                                    val addr = convo?.address ?: ""
-                                    if (vm.isNumberBlocked(addr)) {
-                                        showBlockedDialog = true
-                                        return@InputBar
-                                    }
-                                    if (addr.isBlank()) return@InputBar
-                                    if (vm.settings.delayedSendingEnabled) {
-                                        if (delayedSend.start(draft, currentSimId, vm.settings.delaySeconds, SystemClock.elapsedRealtime())) {
-                                            sendCountdown = delayedSend.remainingSeconds(SystemClock.elapsedRealtime())
-                                            showEmoji = false
-                                            sendAttempt++
-                                        }
-                                    } else {
-                                        vm.send(conversationId, text, currentSimId)
-                                        vm.saveDraft(conversationId, "")
-                                        draft = ""
-                                        showEmoji = false
-                                    }
-                                }
+                            val addr = convo?.address ?: return@InputBar
+                            if (vm.isNumberBlocked(addr)) {
+                                showBlockedDialog = true
+                                return@InputBar
                             }
+                            vm.submitMessage(conversationId, draft, pendingMedia.toList(), currentSimId)
+                            draftEdited = true
+                            draft = ""
+                            pendingMedia.clear()
+                            showEmoji = false
                         },
                         onSchedule = {
                             val text = draft.trim()

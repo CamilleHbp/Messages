@@ -62,8 +62,7 @@ object SettingsSearch {
         card(Route.SETTINGS, 4,
             R.string.settings_forwarding_title,
             R.string.settings_scheduled_title,
-            R.string.settings_delayed_title,
-            R.string.settings_delay_secs_title)
+            R.string.send_delay)
         card(Route.SETTINGS, 5,
             R.string.settings_blocking_title,
             R.string.settings_trash_title,

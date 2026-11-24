@@ -160,4 +160,6 @@
     <string name="settings_scheduled_manage_title">Gestionar mensajes programados</string>
     <string name="settings_search_hint">Buscar en ajustes</string>
     <string name="settings_search_none">Ningún ajuste coincide</string>
+    <string name="send_delay">Retardo de envío</string>
+    <string name="send_delay_off">Desactivado</string>
 </resources>

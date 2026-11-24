@@ -1,6 +1,8 @@
 package com.anindra.messages
 
 import android.app.Activity
+import com.anindra.messages.ui.DelayedTextSend
+import android.os.SystemClock
 import android.app.Application
 import android.Manifest
 import android.content.Intent
@@ -317,6 +319,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteConversation(id: Long) = scope.launch {
+        cancelSend(id)
         if (settings.permanentDeleteEnabled) repo.deleteConversationSuspend(id)
         else repo.trashConversationSuspend(id)
     }
@@ -468,6 +471,53 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             membershipRevision.value++
         }
 
+    private val delayedSends = androidx.compose.runtime.mutableStateMapOf<Long, DelayedTextSend>()
+    internal val sendCountdowns = androidx.compose.runtime.mutableStateMapOf<Long, Int>()
+
+    internal fun pendingSend(id: Long) = delayedSends[id]?.pending
+
+    internal fun cancelSend(id: Long): DelayedTextSend.Pending? {
+        val timer = delayedSends.remove(id) ?: return null
+        sendCountdowns.remove(id)
+        return timer.pending.also { timer.cancel() }
+    }
+
+    fun submitMessage(id: Long, draft: String, media: List<Uri>, simId: Int) {
+        if (id in delayedSends || (draft.isBlank() && media.isEmpty())) return
+        val seconds = settings.sendDelay
+        if (seconds <= 0) {
+            dispatchComposerMessage(id, draft.trim(), media, simId)
+            return
+        }
+        val timer = DelayedTextSend()
+        timer.start(draft, simId, seconds, SystemClock.elapsedRealtime(), media.map(Uri::toString))
+        saveDraft(id, draft)
+        delayedSends[id] = timer
+        sendCountdowns[id] = seconds
+        scope.launch {
+            while (delayedSends[id] === timer) {
+                val now = SystemClock.elapsedRealtime()
+                val due = timer.takeIfDue(now)
+                if (due != null) {
+                    delayedSends.remove(id)
+                    sendCountdowns.remove(id)
+                    dispatchComposerMessage(id, due.body, due.media.map(Uri::parse), due.simId)
+                    break
+                }
+                sendCountdowns[id] = timer.remainingSeconds(now)
+                kotlinx.coroutines.delay(timer.millisUntilNextTick(now))
+            }
+        }
+    }
+
+    private fun dispatchComposerMessage(id: Long, caption: String, media: List<Uri>, simId: Int) {
+        saveDraft(id, "")
+        if (media.isEmpty()) send(id, caption, simId)
+        else media.forEachIndexed { index, uri ->
+            sendMediaMessage(id, uri, if (index == 0) caption else "", simId)
+        }
+    }
+
     fun send(conversationId: Long, body: String, subId: Int = settings.simSubscriptionId) {
         scope.launch { dispatchText(conversationId, body, subId) }
     }
@@ -501,7 +551,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun sendMediaMessage(conversationId: Long, uri: Uri, caption: String = "") {
+    fun sendMediaMessage(conversationId: Long, uri: Uri, caption: String = "", subId: Int = settings.simSubscriptionId) {
         scope.launch {
             val convo = repo.conversationByIdSuspend(conversationId) ?: return@launch
             if (!isPhoneNumber(convo.address)) return@launch
@@ -512,7 +562,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 .filter { isPhoneNumber(it) }
                 .ifEmpty { listOf(convo.address) }
             val handedOff = SmsSender.sendMms(
-                getApplication(), stored.id, recipients, uri, settings.simSubscriptionId,
+                getApplication(), stored.id, recipients, uri, subId,
                 stored.body
             )
             if (!handedOff) {
@@ -766,15 +816,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun unarchiveConversation(id: Long) = scope.launch { repo.setArchivedSuspend(id, false) }
 
+    private val draftWrites = Dispatchers.IO.limitedParallelism(1)
+
     fun saveDraft(conversationId: Long, draft: String) {
-        scope.launch(Dispatchers.IO) { repo.saveDraft(conversationId, draft) }
+        scope.launch(draftWrites) { repo.saveDraft(conversationId, draft) }
     }
 
     /** Leaving a chat: persist the draft first, then trash the conversation if it
      *  ended up with nothing to show. Sequential so the emptiness check sees the
      *  draft we just wrote (and keeps a chat that still has one). */
     fun saveDraftAndMaybeTrash(conversationId: Long, draft: String) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(draftWrites) {
             repo.saveDraft(conversationId, draft)
             repo.trashConversationIfEmptySuspend(conversationId)
         }

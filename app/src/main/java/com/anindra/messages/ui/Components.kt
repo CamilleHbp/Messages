@@ -153,6 +153,7 @@ val LocalNowTick = compositionLocalOf { System.currentTimeMillis() }
 
 /** conversationId -> body of its earliest pending scheduled message, for the
  *  "Scheduled: …" conversation-list preview. Empty when nothing is queued. */
+internal val LocalSendCountdowns = compositionLocalOf<Map<Long, Int>> { emptyMap() }
 val LocalScheduledPreview = compositionLocalOf<Map<Long, String>> { emptyMap() }
 
 fun formatListTime(ts: Long, now: Long = System.currentTimeMillis(), ctx: android.content.Context): String {

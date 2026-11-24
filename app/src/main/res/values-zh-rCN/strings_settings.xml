@@ -160,4 +160,6 @@
     <string name="settings_scheduled_manage_title">管理定时消息</string>
     <string name="settings_search_hint">搜索设置</string>
     <string name="settings_search_none">没有匹配��设置</string>
+    <string name="send_delay">延迟发送</string>
+    <string name="send_delay_off">关闭</string>
 </resources>

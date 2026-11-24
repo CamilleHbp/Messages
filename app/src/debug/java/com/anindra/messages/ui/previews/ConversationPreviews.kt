@@ -177,3 +177,9 @@ private fun ExpressiveTabsPreview() {
         )
     }
 }
+
+@PreviewLightDark
+@Composable
+private fun SendDelayOptionsPreview() {
+    Stage { com.anindra.messages.ui.SendDelayDialog(3, {}, {}) }
+}
