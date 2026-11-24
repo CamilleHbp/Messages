@@ -503,7 +503,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (record == null) compositions.remove(id) else compositions[id] = record
     }
 
-    internal fun savePhotoDraft(id: Long, text: String, media: List<Uri>, sim: Int) {
+    internal fun saveComposerDraft(id: Long, text: String, media: List<Uri>, sim: Int) {
         if (pendingSend(id) != null) return
         val record = ComposerRecord(text, media.map(Uri::toString), sim)
         if (record == compositions[id]) return
@@ -881,10 +881,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun unarchiveConversation(id: Long) = scope.launch { repo.setArchivedSuspend(id, false) }
 
     private val draftWrites = Dispatchers.IO.limitedParallelism(1)
-
-    fun saveDraft(conversationId: Long, draft: String) {
-        scope.launch(draftWrites) { repo.saveDraft(conversationId, draft) }
-    }
 
     /** Leaving a chat: persist the draft first, then trash the conversation if it
      *  ended up with nothing to show. Sequential so the emptiness check sees the

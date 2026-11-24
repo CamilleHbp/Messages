@@ -101,4 +101,8 @@
     <string name="interrupted_title">Отправка прервана</string>
     <string name="interrupted_hint">Время ожидания истекло, пока приложение было закрыто. Проверьте сообщение перед отправкой.</string>
     <string name="chat_send_now">Отправить сейчас</string>
+    <string name="review_message">Проверить сообщение</string>
+    <string name="keep_as_draft">Оставить в черновиках</string>
+    <string name="review_recipient">Кому: %1$s</string>
+    <string name="draft_one_photo">1 фото</string>
 </resources>

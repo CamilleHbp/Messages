@@ -46,6 +46,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
@@ -761,10 +762,8 @@ fun ChatScreen(
         pendingMedia.addAll(canceled.media.map(Uri::parse))
     }
 
-    fun savePhotoDraft() {
-        if (pendingMedia.isNotEmpty() || vm.compositions[conversationId]?.state == ComposerState.DRAFT) {
-            vm.savePhotoDraft(conversationId, draft, pendingMedia.toList(), currentSimId)
-        }
+    fun saveComposerDraft() {
+        vm.saveComposerDraft(conversationId, draft, pendingMedia.toList(), currentSimId)
     }
 
     var showSchedulePicker by remember { mutableStateOf(false) }
@@ -827,7 +826,7 @@ fun ChatScreen(
     ) { success ->
         if (success) {
             cameraFileUri?.let { pendingMedia.add(it) }
-            savePhotoDraft()
+            saveComposerDraft()
         }
     }
 
@@ -844,7 +843,7 @@ fun ChatScreen(
             if (retained != null) pendingMedia.add(retained)
             else Toast.makeText(context, R.string.chat_image_save_failed, Toast.LENGTH_SHORT).show()
         }
-        savePhotoDraft()
+        saveComposerDraft()
     }
 
     fun leaveChat() {
@@ -1171,7 +1170,7 @@ fun ChatScreen(
             cancelDelayedSend()
             initialMedia.filter { it !in pendingMedia }.forEach { pendingMedia.add(it) }
             if (initialDraft.isNotBlank()) draft = initialDraft
-            savePhotoDraft()
+            saveComposerDraft()
             draftEdited = true
             onInitialMediaConsumed()
             onInitialDraftConsumed()
@@ -1179,7 +1178,7 @@ fun ChatScreen(
             cancelDelayedSend()
             draftEdited = true
             draft = initialDraft
-            savePhotoDraft()
+            saveComposerDraft()
             onInitialDraftConsumed()
         }
     }
@@ -1277,7 +1276,7 @@ fun ChatScreen(
                 onSimSelect = { simId, label ->
                     cancelDelayedSend()
                     currentSimId = simId
-                    savePhotoDraft()
+                    saveComposerDraft()
                     vm.settings.simSubscriptionId = simId
                     Toast.makeText(context, context.getString(R.string.chat_sending_via, label), Toast.LENGTH_SHORT).show()
                 },
@@ -1351,7 +1350,7 @@ fun ChatScreen(
                                 e,
                                 style = MaterialTheme.typography.headlineMedium,
                                 modifier = Modifier
-                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e; savePhotoDraft() }
+                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e; saveComposerDraft() }
                                     .padding(6.dp)
                             )
                         }
@@ -1383,7 +1382,7 @@ fun ChatScreen(
                                     onClick = {
                                         cancelDelayedSend()
                                         pendingMedia.remove(uri)
-                                        savePhotoDraft()
+                                        saveComposerDraft()
                                     },
                                     modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
                                 ) {
@@ -1406,16 +1405,17 @@ fun ChatScreen(
                         placeholder = stringResource(R.string.text_placeholder),
                         sims = sims,
                         currentSimId = pending?.simId ?: currentSimId,
-                        onCycleSim = { cancelDelayedSend(); cycleSim(); savePhotoDraft() },
+                        onCycleSim = { cancelDelayedSend(); cycleSim(); saveComposerDraft() },
                         onDraftChange = {
                             if (it != (pending?.draft ?: draft)) {
                                 cancelDelayedSend()
                                 draftEdited = true
                             }
                             draft = it
-                            savePhotoDraft()
+                            saveComposerDraft()
                         },
                         sendCountdown = sendCountdown,
+                        needsReview = needsReview,
                         onCancelSend = ::cancelDelayedSend,
                         hasAttachments = visibleMedia.isNotEmpty(),
                         onSend = {
@@ -1601,13 +1601,32 @@ fun ChatScreen(
 
     if (reviewDialog && needsReview && pending != null) {
         AlertDialog(onDismissRequest = { reviewDialog = false },
-            title = { Text(stringResource(R.string.interrupted_title)) },
-            text = { Text(stringResource(R.string.interrupted_hint)) },
+            title = { Text(stringResource(R.string.review_message)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    convo?.let { thread ->
+                        val recipient = ContactDetails.listLabel(thread.groupTitle, thread.name, thread.address, thread.display)
+                        Text(stringResource(R.string.review_recipient, recipient), style = MaterialTheme.typography.titleMedium)
+                        if (thread.groupTitle.isBlank() && recipient != thread.display && thread.display.isNotBlank()) {
+                            Text(BidiText.ltr(thread.display), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (pending.draft.isNotBlank()) Text(pending.draft)
+                    if (pending.media.isNotEmpty()) Text(photoCountLabel(context, pending.media.size))
+                    val sim = sims.firstOrNull { it.subscriptionId == pending.simId }
+                    if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
+                    else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
+                    else if (sims.size > 1) Text(stringResource(R.string.settings_sim_default))
+                }
+            },
             confirmButton = { TextButton(onClick = {
                 reviewDialog = false
                 vm.confirmReviewedSend(conversationId, pending)
             }) { Text(stringResource(R.string.chat_send_now)) } },
-            dismissButton = { TextButton(onClick = { reviewDialog = false }) { Text(stringResource(R.string.common_cancel)) } })
+            dismissButton = { TextButton(onClick = {
+                cancelDelayedSend()
+                reviewDialog = false
+            }) { Text(stringResource(R.string.keep_as_draft)) } })
     }
 
     if (showRetrySimPicker && retryingMessageId > 0) {
@@ -1722,8 +1741,8 @@ fun ChatScreen(
                     }
                     val timeText = formatDateTime(ts, "MMM d,", is24HourFormat(context))
                     Toast.makeText(context, context.getString(R.string.chat_scheduled_for, timeText), Toast.LENGTH_SHORT).show()
-                    vm.saveDraft(conversationId, "")
                     draft = ""
+                    saveComposerDraft()
                     showEmoji = false
                     showSchedulePicker = false
                 }
@@ -2769,6 +2788,7 @@ internal fun InputBar(
     currentSimId: Int = -1,
     onCycleSim: () -> Unit = {},
     sendCountdown: Int = 0,
+    needsReview: Boolean = false,
     onCancelSend: () -> Unit = {}
 ) {
     val isPending = sendCountdown > 0
@@ -2846,9 +2866,13 @@ internal fun InputBar(
         }
         Spacer(Modifier.width(8.dp))
         val canSend = isPending || draft.isNotBlank() || hasAttachments
-        val actionLabel = stringResource(if (isPending) R.string.chat_cancel else R.string.icon_send)
+        val actionLabel = stringResource(when {
+            isPending -> R.string.chat_cancel
+            needsReview -> R.string.review_message
+            else -> R.string.icon_send
+        })
         val countdownLabel = if (isPending) stringResource(R.string.chat_sending_countdown, sendCountdown) else ""
-        val actionSize = if (isPending) Modifier.heightIn(min = 48.dp) else Modifier.size(48.dp)
+        val actionSize = if (isPending || needsReview) Modifier.heightIn(min = 48.dp) else Modifier.size(48.dp)
         Box(
             actionSize
                 .clip(CircleShape)
@@ -2870,9 +2894,9 @@ internal fun InputBar(
                 },
             contentAlignment = Alignment.Center
         ) {
-            if (isPending) {
+            if (isPending || needsReview) {
                 Text(
-                    stringResource(R.string.cancel_send_seconds, actionLabel, sendCountdown),
+                    if (isPending) stringResource(R.string.cancel_send_seconds, actionLabel, sendCountdown) else actionLabel,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)

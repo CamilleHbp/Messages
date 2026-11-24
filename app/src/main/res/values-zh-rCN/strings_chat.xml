@@ -97,4 +97,8 @@
     <string name="interrupted_title">发送已中断</string>
     <string name="interrupted_hint">应用关闭期间发送倒计时已结束。请在发送前检查消息。</string>
     <string name="chat_send_now">立即发送</string>
+    <string name="review_message">检查消息</string>
+    <string name="keep_as_draft">保留为草稿</string>
+    <string name="review_recipient">收件人：%1$s</string>
+    <string name="draft_one_photo">1 张照片</string>
 </resources>

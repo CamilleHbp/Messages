@@ -101,4 +101,8 @@
     <string name="interrupted_title">送信が中断されました</string>
     <string name="interrupted_hint">アプリを閉じている間に待ち時間が終了しました。送信する前にメッセージを確認してください。</string>
     <string name="chat_send_now">今すぐ送信</string>
+    <string name="review_message">メッセージを確認</string>
+    <string name="keep_as_draft">下書きとして保存</string>
+    <string name="review_recipient">宛先：%1$s</string>
+    <string name="draft_one_photo">写真1枚</string>
 </resources>

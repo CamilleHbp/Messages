@@ -306,3 +306,12 @@ fun SkeletonConversationRow() {
         }
     }
 }
+
+internal fun photoCountLabel(context: android.content.Context, count: Int): String =
+    if (count == 1) context.getString(R.string.draft_one_photo)
+    else context.getString(R.string.draft_photo_count, count)
+
+internal fun photoDraftPreview(countLabel: String, caption: String): String {
+    val line = caption.lineSequence().map(String::trim).filter(String::isNotEmpty).joinToString(" ")
+    return if (line.isEmpty()) countLabel else "$countLabel · $line"
+}
