@@ -105,4 +105,8 @@
     <string name="interrupted_title">Przerwano wysyłanie</string>
     <string name="interrupted_hint">Czas opóźnienia upłynął, gdy aplikacja była zamknięta. Sprawdź wiadomość przed wysłaniem.</string>
     <string name="contacts_settings_hint">W ustawieniach aplikacji otwórz Uprawnienia → Kontakty i wybierz Zezwól.</string>
+    <string name="review_message">Sprawdź wiadomość</string>
+    <string name="keep_as_draft">Zachowaj jako szkic</string>
+    <string name="review_recipient">Do: %1$s</string>
+    <string name="draft_one_photo">1 zdjęcie</string>
 </resources>

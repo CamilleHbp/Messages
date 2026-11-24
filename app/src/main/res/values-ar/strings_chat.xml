@@ -105,4 +105,8 @@
     <string name="interrupted_title">توقف الإرسال</string>
     <string name="interrupted_hint">انتهت مهلة الإرسال أثناء إغلاق التطبيق. راجع رسالتك قبل إرسالها.</string>
     <string name="contacts_settings_hint">في إعدادات التطبيق، افتح الأذونات ثم جهات الاتصال واختر السماح.</string>
+    <string name="review_message">مراجعة الرسالة</string>
+    <string name="keep_as_draft">الاحتفاظ كمسودة</string>
+    <string name="review_recipient">إلى %1$s</string>
+    <string name="draft_one_photo">صورة واحدة</string>
 </resources>

@@ -105,4 +105,8 @@
     <string name="interrupted_title">Envío interrumpido</string>
     <string name="interrupted_hint">El plazo de envío terminó mientras Mensajes estaba cerrado. Revisa el mensaje antes de enviarlo.</string>
     <string name="contacts_settings_hint">En los ajustes de la aplicación, abre Permisos → Contactos y selecciona Permitir.</string>
+    <string name="review_message">Revisar mensaje</string>
+    <string name="keep_as_draft">Guardar como borrador</string>
+    <string name="review_recipient">Para %1$s</string>
+    <string name="draft_one_photo">1 foto</string>
 </resources>

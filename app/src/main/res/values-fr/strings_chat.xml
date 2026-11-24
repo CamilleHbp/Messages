@@ -101,4 +101,8 @@
     <string name="interrupted_title">Envoi interrompu</string>
     <string name="interrupted_hint">Le délai a expiré pendant la fermeture de Messages. Vérifiez votre message avant de l’envoyer.</string>
     <string name="contacts_settings_hint">Dans les paramètres de l’application, ouvrez Autorisations → Contacts et choisissez Autoriser.</string>
+    <string name="review_message">Vérifier le message</string>
+    <string name="keep_as_draft">Garder comme brouillon</string>
+    <string name="review_recipient">À %1$s</string>
+    <string name="draft_one_photo">1 photo</string>
 </resources>

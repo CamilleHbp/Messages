@@ -105,4 +105,8 @@
     <string name="interrupted_title">भेजना रुक गया</string>
     <string name="interrupted_hint">ऐप बंद रहने के दौरान भेजने का समय बीत गया। भेजने से पहले संदेश की समीक्षा करें।</string>
     <string name="contacts_settings_hint">ऐप की सेटिंग में अनुमतियाँ → संपर्क खोलें और अनुमति दें चुनें।</string>
+    <string name="review_message">संदेश की समीक्षा करें</string>
+    <string name="keep_as_draft">ड्राफ़्ट के रूप में रखें</string>
+    <string name="review_recipient">प्राप्तकर्ता: %1$s</string>
+    <string name="draft_one_photo">1 फ़ोटो</string>
 </resources>

@@ -105,4 +105,8 @@
     <string name="interrupted_title">Send interrupted</string>
     <string name="interrupted_hint">The send delay expired while Messages was closed. Review your message before sending.</string>
     <string name="contacts_settings_hint">In app settings, open Permissions → Contacts and choose Allow.</string>
+    <string name="review_message">Review message</string>
+    <string name="keep_as_draft">Keep as draft</string>
+    <string name="review_recipient">To %1$s</string>
+    <string name="draft_one_photo">1 photo</string>
 </resources>

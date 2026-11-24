@@ -105,4 +105,8 @@
     <string name="interrupted_title">Senden unterbrochen</string>
     <string name="interrupted_hint">Die Verzögerung ist abgelaufen, während Messages geschlossen war. Prüfe die Nachricht vor dem Senden.</string>
     <string name="contacts_settings_hint">Öffne in den App-Einstellungen Berechtigungen → Kontakte und wähle Zulassen.</string>
+    <string name="review_message">Nachricht prüfen</string>
+    <string name="keep_as_draft">Als Entwurf behalten</string>
+    <string name="review_recipient">An %1$s</string>
+    <string name="draft_one_photo">1 Foto</string>
 </resources>

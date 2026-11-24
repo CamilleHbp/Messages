@@ -105,4 +105,8 @@
     <string name="interrupted_title">Envio interrompido</string>
     <string name="interrupted_hint">O tempo de espera terminou enquanto o app estava fechado. Revise a mensagem antes de enviar.</string>
     <string name="contacts_settings_hint">Nas configurações do app, abra Permissões → Contatos e selecione Permitir.</string>
+    <string name="review_message">Revisar mensagem</string>
+    <string name="keep_as_draft">Manter como rascunho</string>
+    <string name="review_recipient">Para %1$s</string>
+    <string name="draft_one_photo">1 foto</string>
 </resources>

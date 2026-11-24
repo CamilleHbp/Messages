@@ -1,5 +1,7 @@
 package com.anindra.messages.ui.legacy
 
+import com.anindra.messages.ui.photoCountLabel
+import com.anindra.messages.ui.photoDraftPreview
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -782,9 +784,8 @@ internal fun ConversationRow(
         } else if (composition?.state == com.anindra.messages.data.ComposerState.REVIEW) {
             context.getString(R.string.interrupted_title)
         } else if (photoCount > 0 && settings.draftsEnabled) {
-            val photos = if (photoCount == 1) context.getString(R.string.notif_photo)
-                else context.getString(R.string.draft_photo_count, photoCount)
-            context.getString(R.string.chat_draft_prefix) + photos
+            val caption = composition!!.draft.let { if (settings.hideLinks) hideUrls(it) else it }
+            context.getString(R.string.chat_draft_prefix) + photoDraftPreview(photoCountLabel(context, photoCount), caption)
         } else if (hasDraft) {
             context.getString(R.string.chat_draft_prefix) + draftLabel
         } else if (!scheduledLabel.isNullOrBlank()) {
