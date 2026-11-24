@@ -112,4 +112,9 @@
     <string name="replace_review_photo">取代</string>
     <string name="remove_review_photo">移除</string>
     <string name="review_sim_inactive">所選 SIM 卡已停用。</string>
+    <string name="group_details_expanded">已展開收件人詳細資料</string>
+    <string name="group_details_collapsed">已收合收件人詳細資料</string>
+    <string name="group_no_service">無行動網路服務</string>
+    <string name="group_radio_off">行動通訊已關閉</string>
+    <string name="review_missing_remaining">無法使用的相片：%d 張</string>
 </resources>

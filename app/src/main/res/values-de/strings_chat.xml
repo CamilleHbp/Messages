@@ -116,4 +116,9 @@
     <string name="replace_review_photo">Ersetzen</string>
     <string name="remove_review_photo">Entfernen</string>
     <string name="review_sim_inactive">Die ausgewählte SIM ist nicht mehr aktiv.</string>
+    <string name="group_details_expanded">Empfängerdetails ausgeklappt</string>
+    <string name="group_details_collapsed">Empfängerdetails eingeklappt</string>
+    <string name="group_no_service">Kein Mobilfunknetz</string>
+    <string name="group_radio_off">Mobilfunk ausgeschaltet</string>
+    <string name="review_missing_remaining">Nicht verfügbare Fotos: %d</string>
 </resources>

@@ -116,4 +116,9 @@
     <string name="replace_review_photo">Zastąp</string>
     <string name="remove_review_photo">Usuń</string>
     <string name="review_sim_inactive">Wybrana karta SIM jest nieaktywna.</string>
+    <string name="group_details_expanded">Szczegóły odbiorców rozwinięte</string>
+    <string name="group_details_collapsed">Szczegóły odbiorców zwinięte</string>
+    <string name="group_no_service">Brak sieci komórkowej</string>
+    <string name="group_radio_off">Moduł sieci komórkowej wyłączony</string>
+    <string name="review_missing_remaining">Niedostępne zdjęcia: %d</string>
 </resources>

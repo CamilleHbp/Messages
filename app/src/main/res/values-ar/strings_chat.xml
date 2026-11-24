@@ -116,4 +116,9 @@
     <string name="replace_review_photo">استبدال</string>
     <string name="remove_review_photo">إزالة</string>
     <string name="review_sim_inactive">شريحة SIM المحددة لم تعد نشطة.</string>
+    <string name="group_details_expanded">تفاصيل المستلمين موسّعة</string>
+    <string name="group_details_collapsed">تفاصيل المستلمين مطوية</string>
+    <string name="group_no_service">لا توجد خدمة خلوية</string>
+    <string name="group_radio_off">الاتصال الخلوي متوقف</string>
+    <string name="review_missing_remaining">صور غير متاحة: %d</string>
 </resources>

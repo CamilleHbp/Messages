@@ -116,4 +116,9 @@
     <string name="replace_review_photo">교체</string>
     <string name="remove_review_photo">삭제</string>
     <string name="review_sim_inactive">선택한 SIM이 더 이상 활성 상태가 아닙니다.</string>
+    <string name="group_details_expanded">수신자 세부정보 펼쳐짐</string>
+    <string name="group_details_collapsed">수신자 세부정보 접힘</string>
+    <string name="group_no_service">모바일 서비스 없음</string>
+    <string name="group_radio_off">모바일 무선 기능 꺼짐</string>
+    <string name="review_missing_remaining">사용할 수 없는 사진: %d장</string>
 </resources>

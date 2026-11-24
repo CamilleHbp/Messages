@@ -116,4 +116,9 @@
     <string name="replace_review_photo">Substituir</string>
     <string name="remove_review_photo">Remover</string>
     <string name="review_sim_inactive">O SIM selecionado não está mais ativo.</string>
+    <string name="group_details_expanded">Detalhes dos destinatários expandidos</string>
+    <string name="group_details_collapsed">Detalhes dos destinatários recolhidos</string>
+    <string name="group_no_service">Sem sinal de celular</string>
+    <string name="group_radio_off">Rádio celular desligado</string>
+    <string name="review_missing_remaining">Fotos indisponíveis: %d</string>
 </resources>

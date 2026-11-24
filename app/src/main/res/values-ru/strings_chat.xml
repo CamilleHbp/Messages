@@ -116,4 +116,9 @@
     <string name="replace_review_photo">Заменить</string>
     <string name="remove_review_photo">Удалить</string>
     <string name="review_sim_inactive">Выбранная SIM-карта больше не активна.</string>
+    <string name="group_details_expanded">Сведения о получателях развёрнуты</string>
+    <string name="group_details_collapsed">Сведения о получателях свёрнуты</string>
+    <string name="group_no_service">Нет мобильной сети</string>
+    <string name="group_radio_off">Модуль сотовой связи выключен</string>
+    <string name="review_missing_remaining">Недоступно фото: %d</string>
 </resources>

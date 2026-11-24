@@ -116,4 +116,9 @@
     <string name="replace_review_photo">置き換え</string>
     <string name="remove_review_photo">削除</string>
     <string name="review_sim_inactive">選択した SIM は無効です。</string>
+    <string name="group_details_expanded">宛先の詳細を表示中</string>
+    <string name="group_details_collapsed">宛先の詳細を折りたたみ中</string>
+    <string name="group_no_service">圏外</string>
+    <string name="group_radio_off">携帯通信がオフ</string>
+    <string name="review_missing_remaining">使用できない写真：%d 枚</string>
 </resources>

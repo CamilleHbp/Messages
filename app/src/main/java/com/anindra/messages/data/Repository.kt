@@ -3366,7 +3366,7 @@ class Repository(private val context: Context) {
         val claimed = mutableListOf<RecipientSend>()
         val changed = updateRecipientSends(id, sim) { old ->
             if (retry) old.map {
-                if (it.failed) RecipientSend(it.address, it.attempt + 1).also(claimed::add) else it
+                if (it.failed && it.address in addresses) RecipientSend(it.address, it.attempt + 1).also(claimed::add) else it
             } else if (old.isEmpty()) addresses.distinct().map { RecipientSend(it).also(claimed::add) }
             else old
         }
@@ -3374,11 +3374,11 @@ class Repository(private val context: Context) {
     }
 
     suspend fun recordGroupResult(id: Long, address: String, attempt: Int, part: Int, count: Int,
-        receipt: Boolean, ok: Boolean): Boolean = runOnIoAsync {
+        receipt: Boolean, ok: Boolean, reason: String = ""): Boolean = runOnIoAsync {
         var newlySent = false
         updateRecipientSends(id, null) { rows ->
             rows.map { old ->
-                if (old.address != address) old else old.result(attempt, part, count, receipt, ok).also { next ->
+                if (old.address != address) old else old.result(attempt, part, count, receipt, ok, reason).also { next ->
                     newlySent = old.sent.size < old.parts && next.sent.size == next.parts && !next.failed
                 }
             }

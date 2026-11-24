@@ -177,6 +177,8 @@ import com.anindra.messages.data.MessageLockCrypto
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -260,22 +262,55 @@ internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) 
 @Composable
 internal fun GroupSendActions(rows: List<RecipientSend>, onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val app = LocalContext.current.applicationContext as? com.anindra.messages.MessagesApplication
+    var names by remember(rows) { mutableStateOf(emptyMap<String, String?>()) }
+    var blocked by remember(rows) { mutableStateOf(emptySet<String>()) }
+    var revision by remember { mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        revision++
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(rows, expanded, revision) {
+        val repo = app?.repository ?: return@LaunchedEffect
+        if (!expanded && rows.none { it.failed }) return@LaunchedEffect
+        val details = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val blockedAddresses = rows.filter { it.failed && repo.isAddressBlocked(it.address) }.map { it.address }.toSet()
+            val contactNames = if (expanded) rows.associate { it.address to repo.contactNameFor(it.address) } else emptyMap()
+            blockedAddresses to contactNames
+        }
+        blocked = details.first
+        names = details.second
+    }
     val labels = mapOf(
         "sent" to stringResource(R.string.message_status_sent),
         "delivered" to stringResource(R.string.message_status_delivered),
         "failed" to stringResource(R.string.transfer_log_status_failed),
         "sending" to stringResource(R.string.status_sending)
     )
-    val summary = labels.mapNotNull { (state, label) ->
-        rows.count { it.status == state }.takeIf { it > 0 }?.let { "$it $label" }
-    }.joinToString(" · ")
+    val counts = labels.mapNotNull { (state, label) ->
+        val count = rows.count { it.status == state && it.address !in blocked }
+        if (count > 0) "$count $label" else null
+    }
+    val blockedLabel = if (blocked.isEmpty()) null else "${blocked.size} ${stringResource(R.string.access_blocked)}"
+    val summary = (counts + listOfNotNull(blockedLabel)).joinToString(" · ")
+    val disclosure = stringResource(if (expanded) R.string.group_details_expanded else R.string.group_details_collapsed)
     Column {
-        TextButton(onClick = { expanded = !expanded }) { Text(summary) }
-        if (expanded) rows.forEach { row ->
-            Text("${BidiText.ltr(formatPhoneNumber(row.address))} · ${labels[row.status]}",
+        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.semantics { stateDescription = disclosure }) {
+            Text(summary, Modifier.weight(1f, fill = false))
+            Icon(if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, contentDescription = null)
+        }
+        if (expanded) RecipientSend.displayOrder(rows).forEach { row ->
+            val status = when {
+                row.address in blocked -> stringResource(R.string.access_blocked)
+                row.failed && row.failureReason == "no_service" -> stringResource(R.string.group_no_service)
+                row.failed && row.failureReason == "radio_off" -> stringResource(R.string.group_radio_off)
+                else -> labels[row.status]
+            }
+            val number = BidiText.ltr(formatPhoneNumber(row.address))
+            Text(listOfNotNull(names[row.address]?.takeUnless { it == row.address }, number, status).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall)
         }
-        if (rows.any { it.failed }) {
+        if (rows.any { it.failed && it.address !in blocked }) {
             androidx.compose.foundation.layout.FlowRow {
                 TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.retry_failed))
@@ -1680,65 +1715,86 @@ fun ChatScreen(
             replaceIndex = -1
             replaceUri = null
         }
+        var selectedMissing by rememberSaveable(pending) { mutableIntStateOf(-1) }
         var choosingSim by remember { mutableStateOf(false) }
         AlertDialog(onDismissRequest = { reviewDialog = false },
             title = { Text(stringResource(R.string.review_message)) },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    convo?.let { thread ->
-                        val recipient = ContactDetails.listLabel(thread.groupTitle, thread.name, thread.address, thread.display)
-                        Text(stringResource(R.string.review_recipient, recipient), style = MaterialTheme.typography.titleMedium)
-                        if (thread.groupTitle.isBlank() && recipient != thread.display && thread.display.isNotBlank()) {
-                            Text(BidiText.ltr(thread.display), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    if (members.size > 1) {
-                        TextButton(onClick = { expandedMembers = !expandedMembers }) {
-                            Text(stringResource(R.string.review_members, members.size))
-                        }
-                        if (expandedMembers) members.forEach { (number, name) ->
-                            Text(listOfNotNull(name?.takeUnless { it == number }, BidiText.ltr(formatPhoneNumber(number))).joinToString(" · "))
-                        }
-                    }
-                    if (pending.draft.isNotBlank()) Text(pending.draft)
-                    if (pending.media.isNotEmpty()) {
-                        Text(photoCountLabel(context, pending.media.size))
-                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(pending.media.size) { index ->
-                                val photo = pending.media[index]
-                                if (availability?.missing?.contains(index) == true) {
-                                    Column {
-                                        Text(stringResource(R.string.missing_review_photo, index + 1, pending.media.size))
-                                        Row {
-                                            TextButton(onClick = {
-                                                replaceIndex = index
-                                                replaceUri = photo
-                                                replacement.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                            }) { Text(stringResource(R.string.replace_review_photo)) }
-                                            TextButton(onClick = {
-                                                vm.editReview(conversationId, pending, pending.copy(media =
-                                                    pending.media.filterIndexed { i, _ -> i != index }))
-                                            }) { Text(stringResource(R.string.remove_review_photo)) }
-                                        }
+                androidx.compose.foundation.layout.BoxWithConstraints {
+                    val repairHeight = maxHeight * 0.55f
+                    Column {
+                        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            convo?.let { thread ->
+                                val recipient = ContactDetails.listLabel(thread.groupTitle, thread.name, thread.address, thread.display)
+                                Text(stringResource(R.string.review_recipient, recipient), style = MaterialTheme.typography.titleMedium)
+                                if (thread.groupTitle.isBlank() && recipient != thread.display && thread.display.isNotBlank()) {
+                                    Text(BidiText.ltr(thread.display), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            if (members.size > 1) {
+                                TextButton(onClick = { expandedMembers = !expandedMembers }) {
+                                    Text(stringResource(R.string.review_members, members.size))
+                                }
+                                if (expandedMembers) members.forEach { (number, name) ->
+                                    Text(listOfNotNull(name?.takeUnless { it == number }, BidiText.ltr(formatPhoneNumber(number))).joinToString(" · "))
+                                }
+                            }
+                            if (pending.draft.isNotBlank()) Text(pending.draft)
+                            if (pending.media.isNotEmpty()) {
+                                Text(photoCountLabel(context, pending.media.size))
+                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(pending.media.size) { index ->
+                                        val photo = pending.media[index]
+                                        if (availability?.missing?.contains(index) == true) {
+                                            val label = stringResource(R.string.missing_review_photo, index + 1, pending.media.size)
+                                            TextButton(onClick = { selectedMissing = index },
+                                                modifier = Modifier.semantics { contentDescription = label }) {
+                                                Text(stringResource(R.string.photo_position, index + 1, pending.media.size))
+                                            }
+                                        } else coil3.compose.AsyncImage(model = photo,
+                                            contentDescription = stringResource(R.string.photo_position, index + 1, pending.media.size),
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
+                                                .clickable(role = Role.Button) { enlargedPhoto = photo })
                                     }
-                                } else coil3.compose.AsyncImage(model = photo,
-                                    contentDescription = stringResource(R.string.photo_position, index + 1, pending.media.size),
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
-                                        .clickable(role = Role.Button) { enlargedPhoto = photo })
+                                }
                             }
                         }
-                    }
-                    val active = availability?.active.orEmpty()
-                    val sim = active.firstOrNull { it.subscriptionId == pending.simId }
-                    if (availability?.inactive(pending.simId) == true) {
-                        Text(stringResource(R.string.review_sim_inactive))
-                        if (active.isNotEmpty()) TextButton(onClick = { choosingSim = true }) {
-                            Text(stringResource(R.string.choose_retry_sim))
+                        Column(Modifier.heightIn(max = repairHeight).verticalScroll(rememberScrollState())) {
+                            val index = selectedMissing.takeIf { availability?.missing?.contains(it) == true } ?: availability?.firstMissing
+                            if (index != null) {
+                                val position = stringResource(R.string.photo_position, index + 1, pending.media.size)
+                                val replace = stringResource(R.string.replace_review_photo)
+                                val remove = stringResource(R.string.remove_review_photo)
+                                val missing = availability?.missing?.size ?: 0
+                                Text(stringResource(R.string.missing_review_photo, index + 1, pending.media.size),
+                                    Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                if (missing > 1) Text(stringResource(R.string.review_missing_remaining, missing),
+                                    style = MaterialTheme.typography.bodySmall)
+                                androidx.compose.foundation.layout.FlowRow {
+                                    TextButton(onClick = {
+                                        replaceIndex = index
+                                        replaceUri = pending.media[index]
+                                        replacement.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    }, modifier = Modifier.semantics { contentDescription = "$replace · $position" }) { Text(replace) }
+                                    TextButton(onClick = {
+                                        vm.editReview(conversationId, pending, pending.copy(media =
+                                            pending.media.filterIndexed { i, _ -> i != index }))
+                                    }, modifier = Modifier.semantics { contentDescription = "$remove · $position" }) { Text(remove) }
+                                }
+                            }
+                            val active = availability?.active.orEmpty()
+                            val sim = active.firstOrNull { it.subscriptionId == pending.simId }
+                            if (availability?.inactive(pending.simId) == true) {
+                                Text(stringResource(R.string.review_sim_inactive))
+                                if (active.isNotEmpty()) TextButton(onClick = { choosingSim = true }) {
+                                    Text(stringResource(R.string.choose_retry_sim))
+                                }
+                            } else if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
+                            else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
+                            else if (sims.size > 1) Text(stringResource(R.string.settings_sim_default))
                         }
-                    } else if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
-                    else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
-                    else if (sims.size > 1) Text(stringResource(R.string.settings_sim_default))
+                    }
                 }
             },
             confirmButton = { TextButton(enabled = !checking && members.isNotEmpty() && availability?.ready(pending) == true, onClick = {

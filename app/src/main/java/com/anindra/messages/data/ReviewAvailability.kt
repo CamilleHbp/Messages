@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 internal data class ReviewAvailability(val missing: Set<Int>, val active: List<SimCard>?) {
+    val firstMissing: Int? get() = missing.minOrNull()
+
     fun inactive(sim: Int) = sim >= 0 && active != null && active.none { it.subscriptionId == sim }
     fun ready(record: ComposerRecord) = missing.isEmpty() && !inactive(record.simId) &&
         (record.media.isNotEmpty() || record.draft.isNotBlank())
