@@ -1600,6 +1600,7 @@ fun ChatScreen(
     }
 
     if (reviewDialog && needsReview && pending != null) {
+        var enlargedPhoto by rememberSaveable { mutableStateOf<String?>(null) }
         AlertDialog(onDismissRequest = { reviewDialog = false },
             title = { Text(stringResource(R.string.review_message)) },
             text = {
@@ -1612,7 +1613,19 @@ fun ChatScreen(
                         }
                     }
                     if (pending.draft.isNotBlank()) Text(pending.draft)
-                    if (pending.media.isNotEmpty()) Text(photoCountLabel(context, pending.media.size))
+                    if (pending.media.isNotEmpty()) {
+                        Text(photoCountLabel(context, pending.media.size))
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(pending.media.size) { index ->
+                                val photo = pending.media[index]
+                                coil3.compose.AsyncImage(model = photo,
+                                    contentDescription = stringResource(R.string.photo_position, index + 1, pending.media.size),
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
+                                        .clickable(role = Role.Button) { enlargedPhoto = photo })
+                            }
+                        }
+                    }
                     val sim = sims.firstOrNull { it.subscriptionId == pending.simId }
                     if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
                     else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
@@ -1627,6 +1640,12 @@ fun ChatScreen(
                 cancelDelayedSend()
                 reviewDialog = false
             }) { Text(stringResource(R.string.keep_as_draft)) } })
+        enlargedPhoto?.let { photo ->
+            androidx.compose.ui.window.Dialog(onDismissRequest = { enlargedPhoto = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+                ImagePreview(uri = photo, onDismiss = { enlargedPhoto = null })
+            }
+        }
     }
 
     if (showRetrySimPicker && retryingMessageId > 0) {
