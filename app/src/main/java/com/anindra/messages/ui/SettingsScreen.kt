@@ -104,6 +104,11 @@ fun SettingsScreen(
 
     val context = LocalContext.current
 
+    var delayDialog by remember { mutableStateOf(false) }
+    if (delayDialog) SendDelayDialog(vm.settings.sendDelay, onSelect = {
+        vm.settings.sendDelay = it
+        delayDialog = false
+    }, onDismiss = { delayDialog = false })
     val revision by vm.settings.revision.collectAsState()
     val scheduledAll by vm.scheduledMessages().collectAsState(initial = emptyList())
     val scheduledCount = if (scheduledAll.isEmpty()) null
@@ -244,6 +249,12 @@ fun SettingsScreen(
                     position = RowPosition.FIRST,
                     title = stringResource(R.string.settings_notif_title),
                     onClick = { openSystemNotificationSettings(context) }
+                )
+                SettingsRow(
+                    position = RowPosition.MIDDLE,
+                    title = stringResource(R.string.send_delay),
+                    subtitle = sendDelayLabel(vm.settings.sendDelay),
+                    onClick = { delayDialog = true }
                 )
                 SettingsRow(
                     position = RowPosition.MIDDLE,

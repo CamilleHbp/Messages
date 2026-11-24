@@ -149,8 +149,6 @@ fun SettingsScreen(
     var forwarding by remember(revision) { mutableStateOf(vm.settings.forwardingEnabled) }
     var unreadAtTop by remember(revision) { mutableStateOf(vm.settings.unreadAtTopEnabled) }
     var scheduledMessages by remember(revision) { mutableStateOf(vm.settings.scheduledMessagesEnabled) }
-    var delayedSending by remember(revision) { mutableStateOf(vm.settings.delayedSendingEnabled) }
-    var delaySeconds by remember(revision) { mutableIntStateOf(vm.settings.delaySeconds) }
 
     var simDialog by remember { mutableStateOf(false) }
     var sims by remember { mutableStateOf(emptyList<SimCard>()) }
@@ -477,21 +475,10 @@ fun SettingsScreen(
                     onChecked = { scheduledMessages = it; vm.settings.scheduledMessagesEnabled = it }
                 )
                 SettingsRow(
-                    title = stringResource(R.string.settings_delayed_title),
-                    subtitle = stringResource(R.string.settings_delayed_subtitle),
-                    checked = delayedSending,
-                    onChecked = {
-                        delayedSending = it; vm.settings.delayedSendingEnabled = it
-                        if (it) delayDialog = true
-                    }
+                    title = stringResource(R.string.send_delay),
+                    subtitle = com.anindra.messages.ui.sendDelayLabel(vm.settings.sendDelay),
+                    onClick = { delayDialog = true }
                 )
-                if (delayedSending) {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_delay_secs_title),
-                        subtitle = String.format(context.getString(R.string.settings_delay_with_value), delaySeconds),
-                        onClick = { delayDialog = true }
-                    )
-                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -710,49 +697,10 @@ fun SettingsScreen(
         )
     }
 
-    if (delayDialog) {
-        val options = listOf(1, 3, 5, 10, 30)
-        AlertDialog(
-            onDismissRequest = { delayDialog = false },
-            title = { Text(stringResource(R.string.settings_pin_delay)) },
-            text = {
-                Column {
-                    Text(
-                        stringResource(R.string.settings_choose_delay),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    options.forEach { secs ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    delaySeconds = secs
-                                    vm.settings.delaySeconds = secs
-                                    delayDialog = false
-                                }
-                                .padding(vertical = 4.dp)
-                        ) {
-                            RadioButton(
-                                selected = delaySeconds == secs,
-                                onClick = {
-                                    delaySeconds = secs
-                                    vm.settings.delaySeconds = secs
-                                    delayDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(context.getString(R.string.settings_countdown_placeholder, secs))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { delayDialog = false }) { Text(stringResource(R.string.common_cancel)) }
-            }
-        )
-    }
+    if (delayDialog) com.anindra.messages.ui.SendDelayDialog(vm.settings.sendDelay, onSelect = {
+        vm.settings.sendDelay = it
+        delayDialog = false
+    }, onDismiss = { delayDialog = false })
 
     if (importSourceDialog) {
         var source by remember { mutableStateOf(ImportSource.OWN_BACKUP) }

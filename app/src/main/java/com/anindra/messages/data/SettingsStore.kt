@@ -229,6 +229,16 @@ class SettingsStore(context: Context) {
         get() = prefs.getBoolean(KEY_SCHEDULED_MESSAGES_ENABLED, true)
         set(v) { prefs.edit().putBoolean(KEY_SCHEDULED_MESSAGES_ENABLED, v).apply(); _revision.value++ }
 
+    var sendDelay: Int
+        get() = if (delayedSendingEnabled) delaySeconds else 0
+        set(seconds) {
+            require(seconds in listOf(0, 1, 3, 5, 10, 30))
+            val editor = prefs.edit().putBoolean(KEY_DELAYED_SENDING_ENABLED, seconds > 0)
+            if (seconds > 0) editor.putInt(KEY_DELAY_SECONDS, seconds)
+            editor.apply()
+            _revision.value++
+        }
+
     var delayedSendingEnabled: Boolean
         get() = prefs.getBoolean(KEY_DELAYED_SENDING_ENABLED, false)
         set(v) { prefs.edit().putBoolean(KEY_DELAYED_SENDING_ENABLED, v).apply(); _revision.value++ }

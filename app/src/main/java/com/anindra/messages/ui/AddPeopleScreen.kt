@@ -74,7 +74,7 @@ fun AddPeopleScreen(
     }
 
     val filtered = contacts.filter {
-        (it.name.contains(query, ignoreCase = true) || it.number.contains(query)) &&
+        com.anindra.messages.data.ConversationList.matchesRecipient(it.name, it.number, query.trim()) &&
             it.number !in existing
     }
 

@@ -44,13 +44,16 @@ class DelayedTextSendTest {
     }
 
     @Test
-    fun completionPreservesAnyNewerComposerDraft() {
+    fun attachmentOnlySendKeepsAnImmutableSelectionAndSim() {
         val send = DelayedTextSend()
-        send.start("  Original  ", 7, 1, 0L)
-        val result = send.takeIfDue(1000L)!!
-        assertEquals("", result.draftAfterSending("  Original  "))
-        assertEquals("Next message", result.draftAfterSending("Next message"))
-        assertEquals("Original changed", result.draftAfterSending("Original changed"))
+        val media = mutableListOf("content://test/first", "content://test/second")
+        assertTrue(send.start("", 4, 3, 0, media))
+        media.clear()
+        assertNull(send.takeIfDue(2999))
+        val due = send.takeIfDue(3000)!!
+        assertEquals(listOf("content://test/first", "content://test/second"), due.media)
+        assertEquals(4, due.simId)
+        assertNull(send.takeIfDue(3000))
     }
 
     @Test
