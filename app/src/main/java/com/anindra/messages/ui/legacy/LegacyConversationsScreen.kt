@@ -467,6 +467,7 @@ fun ConversationsScreen(
                 }
             } else {
                 CompositionLocalProvider(
+                    com.anindra.messages.ui.LocalCompositions provides vm.compositions,
                     com.anindra.messages.ui.LocalSendCountdowns provides vm.sendCountdowns,
                     LocalNowTick provides nowTick,
                     LocalScheduledPreview provides scheduledPreview
@@ -757,9 +758,17 @@ internal fun ConversationRow(
     val snippetLabel = if (settings.hideLinks) hideUrls(convo.snippet) else convo.snippet
     val scheduledLabel = LocalScheduledPreview.current[convo.id]
     val countdown = com.anindra.messages.ui.LocalSendCountdowns.current[convo.id]
+    val composition = com.anindra.messages.ui.LocalCompositions.current[convo.id]
+    val photoCount = composition?.media?.size ?: 0
     val previewLabel = BidiText.isolateNumberRuns(
         if (countdown != null) {
             context.getString(R.string.chat_sending_countdown, countdown)
+        } else if (composition?.state == com.anindra.messages.data.ComposerState.REVIEW) {
+            context.getString(R.string.interrupted_title)
+        } else if (photoCount > 0 && settings.draftsEnabled) {
+            val photos = if (photoCount == 1) context.getString(R.string.notif_photo)
+                else context.getString(R.string.draft_photo_count, photoCount)
+            context.getString(R.string.chat_draft_prefix) + photos
         } else if (hasDraft) {
             context.getString(R.string.chat_draft_prefix) + draftLabel
         } else if (!scheduledLabel.isNullOrBlank()) {

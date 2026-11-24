@@ -60,7 +60,7 @@ private const val IMPORT_PROGRESS_EVERY = 250
 /** Tag for the MMS provider-import trace; see com.anindra.messages.sms.MmsTrace. */
 private const val TRACE = "MmsImport"
 
-private const val DB_VERSION = 28
+private const val DB_VERSION = 29
 private const val PREFS_NAME = "messages_schema"
 private const val PREF_HEAL_APPLIED = "heal_v1_applied"
 
@@ -146,6 +146,7 @@ class Db(context: Context) :
         db.execSQL("ALTER TABLE conversations ADD COLUMN group_title TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE conversations ADD COLUMN group_title_custom INTEGER NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE messages ADD COLUMN address TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
         createConversationRecipients(db)
         createMessageProviderIds(db)
     }
@@ -328,6 +329,7 @@ class Db(context: Context) :
         if (oldVersion < 27) {
             healInflatedTimestamps(db)
         }
+        if (oldVersion < 29) db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 28) {
             // A group name the user typed must survive, while the default name
             // should grow when a member is added. Track which is which; existing
@@ -1621,7 +1623,7 @@ class Repository(private val context: Context) {
                       (SELECT COUNT(*) FROM scheduled_messages WHERE conversation_id=?),
                       draft,
                       (SELECT COUNT(*) FROM conversation_recipients WHERE conversation_id=?)
-               FROM conversations WHERE id=? AND deleted_at=0""",
+               FROM conversations WHERE id=? AND deleted_at=0 AND composer=''""",
             arrayOf(
                 conversationId.toString(), conversationId.toString(),
                 conversationId.toString(), conversationId.toString()
@@ -1913,10 +1915,51 @@ class Repository(private val context: Context) {
         notifyChanged()
     }
 
+    internal fun composerRecords(): Map<Long, ComposerRecord> = runOnIo {
+        db.readableDatabase.rawQuery(
+            "SELECT id,composer FROM conversations WHERE composer<>'' AND deleted_at=0", null
+        ).use { cursor ->
+            buildMap { while (cursor.moveToNext()) put(cursor.getLong(0), ComposerRecord.decode(cursor.getString(1))) }
+        }
+    }
+
+    internal fun saveComposer(id: Long, record: ComposerRecord?) = runOnIo {
+        db.writableDatabase.execSQL(
+            "UPDATE conversations SET composer=?,draft=?,draft_date=? WHERE id=?",
+            arrayOf(record?.encode().orEmpty(), record?.draft.orEmpty(), System.currentTimeMillis(), id)
+        )
+        notifyChanged()
+    }
+
+    /** Claim the exact saved composition and create its outgoing rows in the same transaction. */
+    internal fun claimComposer(id: Long, record: ComposerRecord): List<Message> = runOnIo {
+        val database = db.writableDatabase
+        database.beginTransaction()
+        try {
+            val claimed = database.compileStatement(
+                "UPDATE conversations SET composer='',draft='' WHERE id=? AND composer=? AND deleted_at=0 AND blocked=0"
+            ).use {
+                it.bindLong(1, id)
+                it.bindString(2, record.encode())
+                it.executeUpdateDelete() == 1
+            }
+            if (!claimed) return@runOnIo emptyList()
+            val rows = if (record.media.isEmpty()) {
+                listOf(checkNotNull(sendText(id, record.draft.trim(), record.simId)))
+            } else record.media.mapIndexed { index, uri ->
+                checkNotNull(sendMedia(id, "image", uri, if (index == 0) record.draft.trim() else ""))
+            }
+            database.setTransactionSuccessful()
+            rows
+        } finally {
+            database.endTransaction()
+        }
+    }
+
     fun saveDraft(conversationId: Long, draft: String) {
         val now = System.currentTimeMillis()
         db.writableDatabase.execSQL(
-            "UPDATE conversations SET draft=?,draft_date=? WHERE id=?",
+            "UPDATE conversations SET draft=?,draft_date=? WHERE id=? AND composer=''",
             arrayOf<Any?>(draft, now, conversationId)
         )
         notifyChanged()

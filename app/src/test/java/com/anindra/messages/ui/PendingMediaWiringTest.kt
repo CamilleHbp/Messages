@@ -21,7 +21,7 @@ class PendingMediaWiringTest {
         )
         assertTrue(
             "a gallery pick must be staged, not sent",
-            chat.contains("uris.filter { it !in pendingMedia }.forEach { pendingMedia.add(it) }"),
+            chat.contains("if (retained != null) pendingMedia.add(retained)"),
         )
         assertFalse(
             "picking a picture must not send it immediately",
@@ -65,7 +65,7 @@ class PendingMediaWiringTest {
         )
         assertTrue(
             "the draft must ride as the first picture's caption",
-            locate("MainActivity.kt").contains("sendMediaMessage(id, uri, if (index == 0) caption else \"\", simId)"),
+            locate("data/Repository.kt").contains("if (index == 0) record.draft.trim() else \"\""),
         )
     }
 

@@ -95,4 +95,10 @@
     <string name="chat_search_next">다음 일치</string>
     <string name="chat_search_counter">%1$d/%2$d</string>
     <string name="chat_scroll_to_latest">최신 메시지로 이동</string>
+    <string name="photo_position">사진 %2$d장 중 %1$d번째</string>
+    <string name="remove_photo_position">사진 %2$d장 중 %1$d번째 삭제</string>
+    <string name="draft_photo_count">사진 %d장</string>
+    <string name="interrupted_title">전송 중단됨</string>
+    <string name="interrupted_hint">앱이 닫혀 있는 동안 전송 대기 시간이 끝났습니다. 메시지를 확인한 후 전송하세요.</string>
+    <string name="chat_send_now">지금 보내기</string>
 </resources>

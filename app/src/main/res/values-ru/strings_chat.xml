@@ -95,4 +95,10 @@
     <string name="chat_search_next">Следующее совпадение</string>
     <string name="chat_search_counter">%1$d из %2$d</string>
     <string name="chat_scroll_to_latest">К последнему сообщению</string>
+    <string name="photo_position">Фото %1$d из %2$d</string>
+    <string name="remove_photo_position">Удалить фото %1$d из %2$d</string>
+    <string name="draft_photo_count">Фото: %d</string>
+    <string name="interrupted_title">Отправка прервана</string>
+    <string name="interrupted_hint">Время ожидания истекло, пока приложение было закрыто. Проверьте сообщение перед отправкой.</string>
+    <string name="chat_send_now">Отправить сейчас</string>
 </resources>

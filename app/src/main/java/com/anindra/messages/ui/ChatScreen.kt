@@ -1,5 +1,7 @@
 package com.anindra.messages.ui
 
+import com.anindra.messages.copyComposerAttachment
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -161,6 +163,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.anindra.messages.data.ComposerState
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.anindra.messages.AppViewModel
@@ -704,7 +707,8 @@ fun ChatScreen(
     val searchWantsOlder = activeSearch != null && focusedSearchId != null &&
         oldestLoadedId != null && focusedSearchId < oldestLoadedId
     val deliveryReports = remember { vm.deliveryReportsEnabled() }
-    var draft by remember(conversationId) { mutableStateOf("") }
+    val savedComposition = vm.compositions[conversationId]?.takeIf { it.state == ComposerState.DRAFT }
+    var draft by remember(conversationId) { mutableStateOf(savedComposition?.draft.orEmpty()) }
     var draftLoaded by remember(conversationId) { mutableStateOf(false) }
     var draftEdited by remember(conversationId) { mutableStateOf(false) }
     var showEmoji by remember { mutableStateOf(false) }
@@ -712,15 +716,17 @@ fun ChatScreen(
     var attachSheet by remember { mutableStateOf(false) }
     // Picked media waits here until the user sends it, so a picture can be
     // explained or dropped before it leaves — it is no longer sent on pick.
-    val pendingMedia = remember(conversationId) { mutableStateListOf<Uri>() }
+    val pendingMedia = remember(conversationId) {
+        mutableStateListOf<Uri>().apply { savedComposition?.media?.mapTo(this, Uri::parse) }
+    }
 
     val selectedMessageIds = remember { mutableStateListOf<Long>() }
     var textCopyMessage by remember { mutableStateOf<Message?>(null) }
     val selectionActive = selectedMessageIds.isNotEmpty()
 
-    var cameraFileUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraFileUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
-    var currentSimId by remember { mutableIntStateOf(vm.settings.simSubscriptionId) }
+    var currentSimId by remember(conversationId) { mutableIntStateOf(savedComposition?.simId ?: vm.settings.simSubscriptionId) }
     var sims by remember { mutableStateOf(emptyList<SimCard>()) }
 
     var numberIsBlocked by remember { mutableStateOf(false) }
@@ -743,6 +749,8 @@ fun ChatScreen(
 
     val pending = vm.pendingSend(conversationId)
     val sendCountdown = vm.sendCountdowns[conversationId] ?: 0
+    val needsReview = pending?.state == ComposerState.REVIEW
+    var reviewDialog by remember(conversationId) { mutableStateOf(false) }
     val visibleMedia = pending?.media?.map(Uri::parse) ?: pendingMedia
     fun cancelDelayedSend() {
         val canceled = vm.cancelSend(conversationId) ?: return
@@ -751,6 +759,12 @@ fun ChatScreen(
         draft = canceled.draft
         pendingMedia.clear()
         pendingMedia.addAll(canceled.media.map(Uri::parse))
+    }
+
+    fun savePhotoDraft() {
+        if (pendingMedia.isNotEmpty() || vm.compositions[conversationId]?.state == ComposerState.DRAFT) {
+            vm.savePhotoDraft(conversationId, draft, pendingMedia.toList(), currentSimId)
+        }
     }
 
     var showSchedulePicker by remember { mutableStateOf(false) }
@@ -813,13 +827,24 @@ fun ChatScreen(
     ) { success ->
         if (success) {
             cameraFileUri?.let { pendingMedia.add(it) }
+            savePhotoDraft()
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
-        uris.filter { it !in pendingMedia }.forEach { pendingMedia.add(it) }
+        uris.filter { it !in pendingMedia }.forEach { uri ->
+            val retained = try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                uri
+            } catch (_: SecurityException) {
+                context.copyComposerAttachment(uri)
+            }
+            if (retained != null) pendingMedia.add(retained)
+            else Toast.makeText(context, R.string.chat_image_save_failed, Toast.LENGTH_SHORT).show()
+        }
+        savePhotoDraft()
     }
 
     fun leaveChat() {
@@ -1145,7 +1170,8 @@ fun ChatScreen(
         if (initialMedia.isNotEmpty()) {
             cancelDelayedSend()
             initialMedia.filter { it !in pendingMedia }.forEach { pendingMedia.add(it) }
-            draft = initialDraft
+            if (initialDraft.isNotBlank()) draft = initialDraft
+            savePhotoDraft()
             draftEdited = true
             onInitialMediaConsumed()
             onInitialDraftConsumed()
@@ -1153,6 +1179,7 @@ fun ChatScreen(
             cancelDelayedSend()
             draftEdited = true
             draft = initialDraft
+            savePhotoDraft()
             onInitialDraftConsumed()
         }
     }
@@ -1162,7 +1189,7 @@ fun ChatScreen(
     LaunchedEffect(convo) {
         if (convo != null && !draftLoaded) {
             draft = if (vm.pendingSend(conversationId) != null) ""
-            else ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
+            else savedComposition?.draft ?: ChatDraftRestore.restore(convo!!.draft, draft, draftEdited)
             draftLoaded = true
             numberIsBlocked = vm.isNumberBlocked(convo!!.address)
         }
@@ -1248,7 +1275,9 @@ fun ChatScreen(
                 onMenuToggle = { menuOpen = true },
                 onMenuDismiss = { menuOpen = false },
                 onSimSelect = { simId, label ->
+                    cancelDelayedSend()
                     currentSimId = simId
+                    savePhotoDraft()
                     vm.settings.simSubscriptionId = simId
                     Toast.makeText(context, context.getString(R.string.chat_sending_via, label), Toast.LENGTH_SHORT).show()
                 },
@@ -1322,11 +1351,15 @@ fun ChatScreen(
                                 e,
                                 style = MaterialTheme.typography.headlineMedium,
                                 modifier = Modifier
-                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e }
+                                    .clickable { cancelDelayedSend(); draftEdited = true; draft += e; savePhotoDraft() }
                                     .padding(6.dp)
                             )
                         }
                     }
+                }
+                if (needsReview) {
+                    Text(stringResource(R.string.interrupted_hint), style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
                 if (visibleMedia.isNotEmpty()) {
                     Row(
@@ -1336,31 +1369,30 @@ fun ChatScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        visibleMedia.forEach { uri ->
+                        visibleMedia.forEachIndexed { index, uri ->
                             Box(Modifier.size(72.dp)) {
                                 coil3.compose.AsyncImage(
                                     model = uri,
-                                    contentDescription = stringResource(R.string.access_photo),
+                                    contentDescription = stringResource(R.string.photo_position, index + 1, visibleMedia.size),
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .matchParentSize()
                                         .clip(RoundedCornerShape(12.dp))
                                 )
-                                Box(
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(2.dp)
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                        .clickable { cancelDelayedSend(); pendingMedia.remove(uri) },
-                                    contentAlignment = Alignment.Center
+                                IconButton(
+                                    onClick = {
+                                        cancelDelayedSend()
+                                        pendingMedia.remove(uri)
+                                        savePhotoDraft()
+                                    },
+                                    modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
                                 ) {
                                     Icon(
                                         Icons.Rounded.Close,
-                                        contentDescription = stringResource(R.string.common_close),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(14.dp)
+                                        contentDescription = stringResource(R.string.remove_photo_position, index + 1, visibleMedia.size),
+                                        tint = MaterialTheme.colorScheme.inverseOnSurface,
+                                        modifier = Modifier.size(24.dp)
+                                            .background(MaterialTheme.colorScheme.inverseSurface, CircleShape).padding(4.dp)
                                     )
                                 }
                             }
@@ -1374,13 +1406,14 @@ fun ChatScreen(
                         placeholder = stringResource(R.string.text_placeholder),
                         sims = sims,
                         currentSimId = pending?.simId ?: currentSimId,
-                        onCycleSim = { cycleSim() },
+                        onCycleSim = { cancelDelayedSend(); cycleSim(); savePhotoDraft() },
                         onDraftChange = {
                             if (it != (pending?.draft ?: draft)) {
                                 cancelDelayedSend()
                                 draftEdited = true
                             }
                             draft = it
+                            savePhotoDraft()
                         },
                         sendCountdown = sendCountdown,
                         onCancelSend = ::cancelDelayedSend,
@@ -1391,6 +1424,7 @@ fun ChatScreen(
                                 showBlockedDialog = true
                                 return@InputBar
                             }
+                            if (needsReview) { reviewDialog = true; return@InputBar }
                             vm.submitMessage(conversationId, draft, pendingMedia.toList(), currentSimId)
                             draftEdited = true
                             draft = ""
@@ -1411,7 +1445,7 @@ fun ChatScreen(
                             }
                         },
                         onEmojiToggle = { showEmoji = !showEmoji },
-                        onAttach = { attachSheet = true },
+                        onAttach = { cancelDelayedSend(); attachSheet = true },
                         showEmojiButton = vm.settings.emojiButtonEnabled
                     )
                 } else {
@@ -1556,13 +1590,24 @@ fun ChatScreen(
             },
             onCamera = {
                 attachSheet = false
-                val dir = File(context.cacheDir, "camera").apply { mkdirs() }
+                val dir = File(context.filesDir, "composer-media").apply { mkdirs() }
                 val file = File(dir, "photo_${System.currentTimeMillis()}.jpg")
                 cameraFileUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 cameraLauncher.launch(cameraFileUri!!)
             },
             onDismiss = { attachSheet = false }
         )
+    }
+
+    if (reviewDialog && needsReview && pending != null) {
+        AlertDialog(onDismissRequest = { reviewDialog = false },
+            title = { Text(stringResource(R.string.interrupted_title)) },
+            text = { Text(stringResource(R.string.interrupted_hint)) },
+            confirmButton = { TextButton(onClick = {
+                reviewDialog = false
+                vm.confirmReviewedSend(conversationId, pending)
+            }) { Text(stringResource(R.string.chat_send_now)) } },
+            dismissButton = { TextButton(onClick = { reviewDialog = false }) { Text(stringResource(R.string.common_cancel)) } })
     }
 
     if (showRetrySimPicker && retryingMessageId > 0) {
