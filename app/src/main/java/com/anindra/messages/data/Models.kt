@@ -36,7 +36,9 @@ data class Message(
     val deliveredAt: Long = 0,
     /** Who sent it. Blank means the conversation's own address. */
     val address: String = ""
-)
+) {
+    fun forRetry(chosenSim: Int?): Message = if (chosenSim == null) this else copy(subId = chosenSim)
+}
 
 data class BlockedNumber(
     val id: Long = 0,

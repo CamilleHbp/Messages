@@ -54,7 +54,7 @@ class ScheduledDeliveryWiringTest {
     @Test fun dispatchKeepsTheOriginalConversationAndSim() {
         assertTrue(claim.contains("sendText(row.conversationId, row.body, row.subId)"))
         assertFalse(sender.contains("getOrCreateConversationBlocking"))
-        assertTrue(dispatch.contains("stored.id, address, stored.body, scheduled.subId"))
+        assertTrue(dispatch.contains("stored.id, address, stored.body, stored.subId"))
     }
 
     @Test fun aRejectedRadioHandoffMarksTheOutgoingMessageFailed() {

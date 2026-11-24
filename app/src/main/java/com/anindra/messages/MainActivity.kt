@@ -577,8 +577,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch {
             val convo = repo.conversationByIdSuspend(id) ?: return@launch
             for (row in rows) {
-                if (row.mediaUri.isEmpty()) handOffText(convo, row, row.body, record.simId)
-                else handOffMedia(convo, row, Uri.parse(row.mediaUri), record.simId)
+                if (row.mediaUri.isEmpty()) handOffText(convo, row, row.body, row.subId)
+                else handOffMedia(convo, row, Uri.parse(row.mediaUri), row.subId)
             }
         }
     }
@@ -596,7 +596,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val convo = repo.conversationByIdSuspend(conversationId) ?: return
         if (!isPhoneNumber(convo.address)) return
         val stored = repo.sendText(conversationId, body, subId) ?: return
-        handOffText(convo, stored, body, subId)
+        handOffText(convo, stored, body, stored.subId)
     }
 
     private suspend fun handOffText(convo: Conversation, stored: Message, body: String, subId: Int) {
@@ -625,8 +625,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch {
             val convo = repo.conversationByIdSuspend(conversationId) ?: return@launch
             if (!isPhoneNumber(convo.address)) return@launch
-            val stored = repo.sendMedia(conversationId, "image", uri.toString(), caption) ?: return@launch
-            handOffMedia(convo, stored, uri, subId)
+            val stored = repo.sendMedia(conversationId, "image", uri.toString(), caption, subId) ?: return@launch
+            handOffMedia(convo, stored, uri, stored.subId)
         }
     }
 
@@ -680,27 +680,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun retryMessage(messageId: Long, simId: Int = settings.simSubscriptionId) {
+    fun retryMessage(messageId: Long, selectedSim: Int? = null) {
         scope.launch {
             val msg = repo.messageByIdSuspend(messageId) ?: return@launch
             val convo = repo.conversationByIdSuspend(msg.conversationId) ?: return@launch
             if (!isPhoneNumber(convo.address)) return@launch
-            repo.markMessageStatusSuspend(messageId, "sending")
-            val recipients = repo.conversationRecipients(msg.conversationId)
-                .filter { isPhoneNumber(it) }
-                .ifEmpty { listOf(convo.address) }
-            val handedOff = if (msg.mediaType == "image" && msg.mediaUri.isNotBlank()) {
-                SmsSender.sendMms(getApplication(), messageId, recipients, Uri.parse(msg.mediaUri), simId)
-            } else {
-                val results = recipients.map { address ->
-                    SmsSender.send(
-                        getApplication(), messageId, address, msg.body,
-                        simId, settings.deliveryReportsEnabled
-                    )
-                }
-                results.isNotEmpty() && results.any { it }
-            }
-            if (!handedOff) repo.markMessageStatusSuspend(messageId, "failed")
+            val retry = msg.forRetry(selectedSim)
+            if (!repo.claimFailedSend(messageId, retry.subId)) return@launch
+            if (retry.mediaType == "image") handOffMedia(convo, retry, Uri.parse(retry.mediaUri), retry.subId)
+            else handOffText(convo, retry, retry.body, retry.subId)
         }
     }
 
@@ -944,18 +932,18 @@ when (val plan = ForwardPlan.of(msg, text)) {
                     handOff(stored.id, target.address) {
                         SmsSender.send(
                             getApplication(), stored.id, target.address, plan.body,
-                            subId, settings.deliveryReportsEnabled
+                            stored.subId, settings.deliveryReportsEnabled
                         )
                     }
                 }
                 is ForwardPlan.Mms -> {
                     val uri = Uri.parse(plan.mediaUri)
                     val stored = repo.sendMedia(
-                        targetConversationId, "image", plan.mediaUri, plan.caption
+                        targetConversationId, "image", plan.mediaUri, plan.caption, subId
                     ) ?: return@launch
                     handOff(stored.id, target.address) {
                         SmsSender.sendMms(
-                            getApplication(), stored.id, listOf(target.address), uri, subId, plan.caption
+                            getApplication(), stored.id, listOf(target.address), uri, stored.subId, plan.caption
                         )
                     }
                 }

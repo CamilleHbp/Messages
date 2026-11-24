@@ -240,6 +240,21 @@ internal fun TextCopyDialog(
     )
 }
 
+@Composable
+internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
+    androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center,
+        itemVerticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.chat_status_not_sent), color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelSmall)
+        TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.chat_retry))
+        }
+        if (onChooseSim != null) TextButton(onClick = onChooseSim, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.choose_retry_sim))
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatBubble(
@@ -260,6 +275,7 @@ internal fun ChatBubble(
     onEntranceStart: () -> Unit = {},
     onLongPress: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onChooseSim: (() -> Unit)? = null,
     onReact: (String) -> Unit = {},
     showReactionBar: Boolean = false,
     searchQuery: String? = null,
@@ -459,27 +475,7 @@ internal fun ChatBubble(
             }
 
             if (msg.status == "failed" && msg.isMe) {
-                Row(
-                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        stringResource(R.string.chat_status_not_sent),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
-                        color = cs.error
-                    )
-                    Text(
-                        " · ",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
-                        color = cs.error
-                    )
-                    Text(
-                        stringResource(R.string.chat_status_retry),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
-                        color = cs.error,
-                        modifier = Modifier.clickable { onRetry() }
-                    )
-                }
+                FailedSendActions(onRetry, onChooseSim)
             } else if (showTime) {
                 // Google shows the type only on your own messages.
                 val statusText = if (msg.isMe) {
@@ -1525,7 +1521,11 @@ fun ChatScreen(
                             showReactionBar = canReact &&
                                 selectedMessageIds.size == 1 &&
                                 msg.id in selectedMessageIds,
-                            onRetry = { vm.retryMessage(msg.id) }
+                            onRetry = { vm.retryMessage(msg.id) },
+                            onChooseSim = if (SimSwitcher.canChooseRetrySim(msg.subId, sims)) ({
+                                retryingMessageId = msg.id
+                                showRetrySimPicker = true
+                            }) else null
                         )
                     }
                 }
@@ -1612,6 +1612,7 @@ fun ChatScreen(
     }
 
     if (reviewDialog && needsReview && pending != null) {
+        var enlargedPhoto by rememberSaveable { mutableStateOf<String?>(null) }
         AlertDialog(onDismissRequest = { reviewDialog = false },
             title = { Text(stringResource(R.string.review_message)) },
             text = {
@@ -1624,7 +1625,19 @@ fun ChatScreen(
                         }
                     }
                     if (pending.draft.isNotBlank()) Text(pending.draft)
-                    if (pending.media.isNotEmpty()) Text(photoCountLabel(context, pending.media.size))
+                    if (pending.media.isNotEmpty()) {
+                        Text(photoCountLabel(context, pending.media.size))
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(pending.media.size) { index ->
+                                val photo = pending.media[index]
+                                coil3.compose.AsyncImage(model = photo,
+                                    contentDescription = stringResource(R.string.photo_position, index + 1, pending.media.size),
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
+                                        .clickable(role = Role.Button) { enlargedPhoto = photo })
+                            }
+                        }
+                    }
                     val sim = sims.firstOrNull { it.subscriptionId == pending.simId }
                     if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
                     else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
@@ -1639,12 +1652,18 @@ fun ChatScreen(
                 cancelDelayedSend()
                 reviewDialog = false
             }) { Text(stringResource(R.string.keep_as_draft)) } })
+        enlargedPhoto?.let { photo ->
+            androidx.compose.ui.window.Dialog(onDismissRequest = { enlargedPhoto = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+                ImagePreview(uri = photo, onDismiss = { enlargedPhoto = null })
+            }
+        }
     }
 
     if (showRetrySimPicker && retryingMessageId > 0) {
         SimPickerDialog(
             sims = sims,
-            currentSimId = currentSimId,
+            currentSimId = messages.firstOrNull { it.id == retryingMessageId }?.subId ?: -1,
             onSelect = { simId ->
                 showRetrySimPicker = false
                 vm.retryMessage(retryingMessageId, simId)
@@ -2144,9 +2163,8 @@ internal fun ChatMessageList(
                 showStatus = idx == messages.lastIndex && msg.isMe,
                 deliveryReports = deliveryReports,
                 forwardingEnabled = forwardingEnabled,
-                onRetry = {
-                    if (sims.size > 1) onRetryWithPicker(msg.id) else onRetry(msg.id)
-                },
+                onRetry = { onRetry(msg.id) },
+                onChooseSim = if (SimSwitcher.canChooseRetrySim(msg.subId, sims)) ({ onRetryWithPicker(msg.id) }) else null,
                 onLongPress = { onLongPress(msg.id) },
                 highlightLinks = highlightLinks,
                 linkWarningEnabled = linkWarningEnabled,
@@ -2439,6 +2457,7 @@ fun MessageRow(
     deliveryReports: Boolean,
     forwardingEnabled: Boolean = false,
     onRetry: () -> Unit = {},
+    onChooseSim: (() -> Unit)? = null,
     onLongPress: () -> Unit = {},
     highlightLinks: Boolean = false,
     linkWarningEnabled: Boolean = true,
@@ -2559,27 +2578,7 @@ fun MessageRow(
         val simLabelFinal = simLabel
 
         if (msg.status == "failed" && msg.isMe) {
-            Row(
-                modifier = Modifier.padding(top = 2.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Not sent",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.error
-                )
-                Text(
-                    " · ",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.error
-                )
-                Text(
-                    stringResource(R.string.chat_status_retry),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.error,
-                    modifier = Modifier.clickable { onRetry() }
-                )
-            }
+            FailedSendActions(onRetry, onChooseSim)
         } else {
             val statusText = if (msg.isMe) {
                 when {
@@ -2928,7 +2927,7 @@ internal fun SimPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSelect(selected) }) { Text(stringResource(R.string.chat_retry)) }
+            TextButton(enabled = sims.any { it.subscriptionId == selected }, onClick = { onSelect(selected) }) { Text(stringResource(R.string.chat_retry)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }

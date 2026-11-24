@@ -109,4 +109,5 @@
     <string name="keep_as_draft">ड्राफ़्ट के रूप में रखें</string>
     <string name="review_recipient">प्राप्तकर्ता: %1$s</string>
     <string name="draft_one_photo">1 फ़ोटो</string>
+    <string name="choose_retry_sim">सिम चुनें</string>
 </resources>

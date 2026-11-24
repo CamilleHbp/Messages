@@ -1177,8 +1177,15 @@ class Repository(private val context: Context) {
             removed > 0
         }
 
+    private fun outgoingSubscription(requested: Int): Int {
+        if (requested >= 0) return requested
+        return runCatching { android.telephony.SubscriptionManager.getDefaultSmsSubscriptionId() }
+            .getOrDefault(-1).coerceAtLeast(-1)
+    }
+
     /** Stores a text message as 'sending'; SmsStatusReceiver confirms the final state. */
     fun sendText(conversationId: Long, body: String, subId: Int = -1): Message? {
+        val sendingSim = outgoingSubscription(subId)
         val now = System.currentTimeMillis()
         val clean = MessageBody.normalize(body)
         val cv = ContentValues().apply {
@@ -1189,14 +1196,15 @@ class Repository(private val context: Context) {
             put("status", "sending")
             put("media_type", "text")
             put("transport", MmsSupport.TRANSPORT_SMS)
-            put("sub_id", subId)
+            put("sub_id", sendingSim)
         }
         val id = db.writableDatabase.insertOrThrow("messages", null, cv)
         touchConversation(conversationId, clean, now, isMe = true)
-        return Message(id, conversationId, clean, now, true, "sending", subId = subId)
+        return Message(id, conversationId, clean, now, true, "sending", subId = sendingSim)
     }
 
-    fun sendMedia(conversationId: Long, mediaType: String, uri: String, caption: String = ""): Message? {
+    fun sendMedia(conversationId: Long, mediaType: String, uri: String, caption: String = "", subId: Int = -1): Message? {
+        val sendingSim = outgoingSubscription(subId)
         val now = System.currentTimeMillis()
         val clean = MessageBody.normalize(caption)
         val cv = ContentValues().apply {
@@ -1207,11 +1215,12 @@ class Repository(private val context: Context) {
             put("status", "sending")
             put("media_type", mediaType)
             put("media_uri", uri)
+            put("sub_id", sendingSim)
             put("transport", MmsSupport.TRANSPORT_SMS)
         }
         val id = db.writableDatabase.insertOrThrow("messages", null, cv)
         touchConversation(conversationId, if (mediaType == "image") "Photo" else "Voice message", now, isMe = true)
-        return Message(id, conversationId, clean, now, true, "sending", mediaType, uri)
+        return Message(id, conversationId, clean, now, true, "sending", mediaType, uri, subId = sendingSim)
     }
 
     /**
@@ -1964,7 +1973,7 @@ class Repository(private val context: Context) {
             val rows = if (record.media.isEmpty()) {
                 listOf(checkNotNull(sendText(id, record.draft.trim(), record.simId)))
             } else record.media.mapIndexed { index, uri ->
-                checkNotNull(sendMedia(id, "image", uri, if (index == 0) record.draft.trim() else ""))
+                checkNotNull(sendMedia(id, "image", uri, if (index == 0) record.draft.trim() else "", record.simId))
             }
             database.setTransactionSuccessful()
             rows
@@ -3327,10 +3336,19 @@ class Repository(private val context: Context) {
         }
     }
 
+    suspend fun claimFailedSend(id: Long, simId: Int): Boolean = runOnIoAsync {
+        val changed = db.writableDatabase.update("messages", ContentValues().apply {
+            put("status", "sending")
+            put("sub_id", simId)
+        }, "id=? AND is_me=1 AND status='failed' AND deleted_at=0", arrayOf(id.toString())) == 1
+        if (changed) notifyChanged()
+        changed
+    }
+
     suspend fun messageByIdSuspend(messageId: Long): Message? = runOnIoAsync {
         var found: Message? = null
         db.readableDatabase.rawQuery(
-            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions
+            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions,sub_id
                FROM messages WHERE id=?""",
             arrayOf(messageId.toString())
         ).use { c ->
@@ -3343,7 +3361,8 @@ class Repository(private val context: Context) {
                 status = c.getString(4),
                 mediaType = c.getString(5),
                 mediaUri = c.getString(6),
-                reactions = parseReactions(c.getString(7))
+                reactions = parseReactions(c.getString(7)),
+                subId = c.getInt(8)
             )
         }
         found

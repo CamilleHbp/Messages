@@ -78,7 +78,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
                         .filter { com.anindra.messages.ui.isPhoneNumber(it) && !repo.isAddressBlocked(it) }
                     val results = recipients.map { address ->
                         SmsSender.send(
-                            context, stored.id, address, stored.body, scheduled.subId,
+                            context, stored.id, address, stored.body, stored.subId,
                             repo.settings.deliveryReportsEnabled
                         )
                     }

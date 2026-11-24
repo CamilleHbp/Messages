@@ -16,6 +16,9 @@ object SimSwitcher {
      *  keyboard hides the control exactly when that choice is made. */
     fun shouldShowSwitch(simCount: Int): Boolean = simCount > 1
 
+    fun canChooseRetrySim(storedId: Int, sims: List<SimCard>): Boolean =
+        sims.size > 1 || (storedId >= 0 && sims.any { it.subscriptionId != storedId })
+
     /** Position of [currentSubId] in [sims], falling back to 0 the same way
      *  [next] does. A saved id that no longer matches any SIM would otherwise
      *  yield -1 and render as slot "0". */

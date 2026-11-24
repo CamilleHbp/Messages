@@ -109,4 +109,5 @@
     <string name="keep_as_draft">Keep as draft</string>
     <string name="review_recipient">To %1$s</string>
     <string name="draft_one_photo">1 photo</string>
+    <string name="choose_retry_sim">Choose SIM</string>
 </resources>

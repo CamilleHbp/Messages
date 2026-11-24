@@ -218,6 +218,7 @@ fun ConversationsScreen(
     val rowSettings = remember(settingsRevision) {
         RowSettings(
             pinnedEnabled = vm.settings.pinnedEnabled,
+            draftsEnabled = vm.settings.draftsEnabled,
             archivingEnabled = vm.settings.archivingEnabled,
             blockingEnabled = vm.settings.blockingEnabled,
             swipeEnabled = leftSwipe || rightSwipe,
@@ -939,7 +940,7 @@ internal fun ConversationRow(
     val senderLabel = ContactDetails.listLabel(
         convo.groupTitle, convo.name, convo.address, BidiText.ltr(convo.display)
     )
-    val hasDraft = convo.draft.isNotBlank()
+    val hasDraft = settings.draftsEnabled && convo.draft.isNotBlank()
     val draftLabel = if (settings.hideLinks) hideUrls(convo.draft) else convo.draft
     val snippetLabel = if (settings.hideLinks) hideUrls(convo.snippet) else convo.snippet
     val scheduledLabel = LocalScheduledPreview.current[convo.id]
