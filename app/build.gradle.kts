@@ -17,8 +17,8 @@ android {
         applicationId = "com.anindra.messages"
         minSdk = 29
         targetSdk = 36
-        versionCode = 44
-        versionName = "1.0.30-camille.11"
+        versionCode = 45
+        versionName = "1.0.30-camille.12"
     }
 
     // RELEASE_KEYSTORE lets a throwaway key stand in for a side build without
