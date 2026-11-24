@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">+%d more</string>
     <string name="chat_send_now">Send now</string>
     <string name="chat_cancel_scheduled">Cancel scheduled message</string>
+    <string name="photo_position">Photo %1$d of %2$d</string>
+    <string name="remove_photo_position">Remove photo %1$d of %2$d</string>
+    <string name="draft_photo_count">%d photos</string>
+    <string name="interrupted_title">Send interrupted</string>
+    <string name="interrupted_hint">The send delay expired while Messages was closed. Review your message before sending.</string>
+    <string name="contacts_settings_hint">In app settings, open Permissions → Contacts and choose Allow.</string>
 </resources>

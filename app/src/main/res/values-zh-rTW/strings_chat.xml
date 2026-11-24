@@ -95,4 +95,10 @@
     <string name="chat_scheduled_more">還有 %d 則</string>
     <string name="chat_send_now">立即傳送</string>
     <string name="chat_cancel_scheduled">取消排程訊息</string>
+    <string name="photo_position">第 %1$d 張相片，共 %2$d 張</string>
+    <string name="remove_photo_position">移除第 %1$d 張相片，共 %2$d 張</string>
+    <string name="draft_photo_count">%d 張相片</string>
+    <string name="interrupted_title">傳送已中斷</string>
+    <string name="interrupted_hint">應用程式關閉期間傳送倒數已結束。請在傳送前檢查訊息。</string>
+    <string name="contacts_settings_hint">在應用程式設定中開啟「權限」→「聯絡人」，然後選擇「允許」。</string>
 </resources>

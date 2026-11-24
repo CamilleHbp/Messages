@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">+%d więcej</string>
     <string name="chat_send_now">Wyślij teraz</string>
     <string name="chat_cancel_scheduled">Anuluj zaplanowaną wiadomość</string>
+    <string name="photo_position">Zdjęcie %1$d z %2$d</string>
+    <string name="remove_photo_position">Usuń zdjęcie %1$d z %2$d</string>
+    <string name="draft_photo_count">Zdjęcia: %d</string>
+    <string name="interrupted_title">Przerwano wysyłanie</string>
+    <string name="interrupted_hint">Czas opóźnienia upłynął, gdy aplikacja była zamknięta. Sprawdź wiadomość przed wysłaniem.</string>
+    <string name="contacts_settings_hint">W ustawieniach aplikacji otwórz Uprawnienia → Kontakty i wybierz Zezwól.</string>
 </resources>

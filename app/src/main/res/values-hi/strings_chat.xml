@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">+%d और</string>
     <string name="chat_send_now">अभी भेजें</string>
     <string name="chat_cancel_scheduled">निर्धारित संदेश रद्द करें</string>
+    <string name="photo_position">%2$d में से फ़ोटो %1$d</string>
+    <string name="remove_photo_position">%2$d में से फ़ोटो %1$d हटाएँ</string>
+    <string name="draft_photo_count">%d फ़ोटो</string>
+    <string name="interrupted_title">भेजना रुक गया</string>
+    <string name="interrupted_hint">ऐप बंद रहने के दौरान भेजने का समय बीत गया। भेजने से पहले संदेश की समीक्षा करें।</string>
+    <string name="contacts_settings_hint">ऐप की सेटिंग में अनुमतियाँ → संपर्क खोलें और अनुमति दें चुनें।</string>
 </resources>

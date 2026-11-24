@@ -95,4 +95,10 @@
     <string name="chat_scheduled_more">+%d autres</string>
     <string name="chat_send_now">Envoyer maintenant</string>
     <string name="chat_cancel_scheduled">Annuler le message programmé</string>
+    <string name="photo_position">Photo %1$d sur %2$d</string>
+    <string name="remove_photo_position">Retirer la photo %1$d sur %2$d</string>
+    <string name="draft_photo_count">%d photos</string>
+    <string name="interrupted_title">Envoi interrompu</string>
+    <string name="interrupted_hint">Le délai a expiré pendant la fermeture de Messages. Vérifiez votre message avant de l’envoyer.</string>
+    <string name="contacts_settings_hint">Dans les paramètres de l’application, ouvrez Autorisations → Contacts et choisissez Autoriser.</string>
 </resources>

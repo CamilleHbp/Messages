@@ -153,6 +153,7 @@ val LocalNowTick = compositionLocalOf { System.currentTimeMillis() }
 
 /** conversationId -> body of its earliest pending scheduled message, for the
  *  "Scheduled: …" conversation-list preview. Empty when nothing is queued. */
+internal val LocalCompositions = compositionLocalOf<Map<Long, com.anindra.messages.data.ComposerRecord>> { emptyMap() }
 internal val LocalSendCountdowns = compositionLocalOf<Map<Long, Int>> { emptyMap() }
 val LocalScheduledPreview = compositionLocalOf<Map<Long, String>> { emptyMap() }
 

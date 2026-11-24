@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">+%d mais</string>
     <string name="chat_send_now">Enviar agora</string>
     <string name="chat_cancel_scheduled">Cancelar mensagem agendada</string>
+    <string name="photo_position">Foto %1$d de %2$d</string>
+    <string name="remove_photo_position">Remover foto %1$d de %2$d</string>
+    <string name="draft_photo_count">%d fotos</string>
+    <string name="interrupted_title">Envio interrompido</string>
+    <string name="interrupted_hint">O tempo de espera terminou enquanto o app estava fechado. Revise a mensagem antes de enviar.</string>
+    <string name="contacts_settings_hint">Nas configurações do app, abra Permissões → Contatos e selecione Permitir.</string>
 </resources>

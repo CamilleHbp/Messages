@@ -1,7 +1,8 @@
 package com.anindra.messages
 
 import android.app.Activity
-import com.anindra.messages.ui.DelayedTextSend
+import com.anindra.messages.data.ComposerRecord
+import com.anindra.messages.data.ComposerState
 import kotlinx.coroutines.ensureActive
 import android.os.SystemClock
 import android.app.Application
@@ -329,6 +330,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteConversation(id: Long) = scope.launch {
         cancelSend(id)
+        if (id in compositions) persist(id, null)
         if (settings.permanentDeleteEnabled) repo.deleteConversationSuspend(id)
         else repo.trashConversationSuspend(id)
     }
@@ -482,50 +484,102 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             membershipRevision.value++
         }
 
-    private val delayedSends = androidx.compose.runtime.mutableStateMapOf<Long, DelayedTextSend>()
+    internal val compositions = androidx.compose.runtime.mutableStateMapOf<Long, ComposerRecord>()
     internal val sendCountdowns = androidx.compose.runtime.mutableStateMapOf<Long, Int>()
+    private val timers = mutableMapOf<Long, kotlinx.coroutines.Job>()
+    private var visible = false
 
-    internal fun pendingSend(id: Long) = delayedSends[id]?.pending
+    fun startCountdowns() {
+        visible = true
+        compositions.clear()
+        for ((id, stored) in repo.composerRecords()) {
+            val record = stored.restored(System.currentTimeMillis())
+            if (record != stored) repo.saveComposer(id, record)
+            compositions[id] = record
+            if (record.state == ComposerState.QUEUED) startTimer(id, record)
+        }
+    }
 
-    internal fun cancelSend(id: Long): DelayedTextSend.Pending? {
-        val timer = delayedSends.remove(id) ?: return null
+    fun stopCountdowns() {
+        visible = false
+        timers.values.forEach { it.cancel() }
+        timers.clear()
+        sendCountdowns.clear()
+    }
+
+    internal fun pendingSend(id: Long) = compositions[id]?.takeIf { it.state != ComposerState.DRAFT }
+
+    private fun persist(id: Long, record: ComposerRecord?) {
+        repo.saveComposer(id, record)
+        if (record == null) compositions.remove(id) else compositions[id] = record
+    }
+
+    internal fun savePhotoDraft(id: Long, text: String, media: List<Uri>, sim: Int) {
+        if (pendingSend(id) != null) return
+        val record = ComposerRecord(text, media.map(Uri::toString), sim)
+        if (record == compositions[id]) return
+        if (record.media.isEmpty() && record.draft.isEmpty()) persist(id, null) else persist(id, record)
+    }
+
+    internal fun cancelSend(id: Long): ComposerRecord? {
+        val record = pendingSend(id) ?: return null
+        timers.remove(id)?.cancel()
         sendCountdowns.remove(id)
-        return timer.pending.also { timer.cancel() }
+        persist(id, record.copy(state = ComposerState.DRAFT, deadline = 0))
+        return record
     }
 
     fun submitMessage(id: Long, draft: String, media: List<Uri>, simId: Int) {
-        if (id in delayedSends || (draft.isBlank() && media.isEmpty())) return
+        if (pendingSend(id) != null || (draft.isBlank() && media.isEmpty())) return
         val seconds = settings.sendDelay
-        if (seconds <= 0) {
-            dispatchComposerMessage(id, draft.trim(), media, simId)
+        val record = ComposerRecord(draft, media.map(Uri::toString), simId, ComposerState.QUEUED,
+            System.currentTimeMillis() + seconds * 1000L)
+        persist(id, record)
+        if (seconds <= 0) dispatchComposer(id, record) else startTimer(id, record)
+    }
+
+    private fun startTimer(id: Long, record: ComposerRecord) {
+        timers.remove(id)?.cancel()
+        val remaining = record.remainingMillis(System.currentTimeMillis())
+        if (!visible || remaining == 0L) {
+            persist(id, record.copy(state = ComposerState.REVIEW))
             return
         }
-        val timer = DelayedTextSend()
-        timer.start(draft, simId, seconds, SystemClock.elapsedRealtime(), media.map(Uri::toString))
-        saveDraft(id, draft)
-        delayedSends[id] = timer
-        sendCountdowns[id] = seconds
-        scope.launch {
-            while (delayedSends[id] === timer) {
-                val now = SystemClock.elapsedRealtime()
-                val due = timer.takeIfDue(now)
-                if (due != null) {
-                    delayedSends.remove(id)
-                    sendCountdowns.remove(id)
-                    dispatchComposerMessage(id, due.body, due.media.map(Uri::parse), due.simId)
+        val end = SystemClock.elapsedRealtime() + remaining
+        timers[id] = scope.launch {
+            while (visible && compositions[id] == record) {
+                val left = end - SystemClock.elapsedRealtime()
+                if (left <= 0) {
+                    dispatchComposer(id, record)
                     break
                 }
-                sendCountdowns[id] = timer.remainingSeconds(now)
-                kotlinx.coroutines.delay(timer.millisUntilNextTick(now))
+                sendCountdowns[id] = ((left + 999) / 1000).toInt()
+                kotlinx.coroutines.delay((left - 1) % 1000 + 1)
             }
         }
     }
 
-    private fun dispatchComposerMessage(id: Long, caption: String, media: List<Uri>, simId: Int) {
-        saveDraft(id, "")
-        if (media.isEmpty()) send(id, caption, simId)
-        else media.forEachIndexed { index, uri ->
-            sendMediaMessage(id, uri, if (index == 0) caption else "", simId)
+    internal fun confirmReviewedSend(id: Long, reviewed: ComposerRecord) {
+        if (reviewed.state == ComposerState.REVIEW && compositions[id] == reviewed) dispatchComposer(id, reviewed)
+    }
+
+    private fun dispatchComposer(id: Long, record: ComposerRecord) {
+        val rows = repo.claimComposer(id, record)
+        sendCountdowns.remove(id)
+        timers.remove(id)
+        if (rows.isEmpty()) {
+            val stored = repo.composerRecords()[id]
+            if (stored == record) persist(id, record.copy(state = ComposerState.REVIEW))
+            else if (stored == null) compositions.remove(id) else compositions[id] = stored
+            return
+        }
+        compositions.remove(id)
+        scope.launch {
+            val convo = repo.conversationByIdSuspend(id) ?: return@launch
+            for (row in rows) {
+                if (row.mediaUri.isEmpty()) handOffText(convo, row, row.body, record.simId)
+                else handOffMedia(convo, row, Uri.parse(row.mediaUri), record.simId)
+            }
         }
     }
 
@@ -542,6 +596,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val convo = repo.conversationByIdSuspend(conversationId) ?: return
         if (!isPhoneNumber(convo.address)) return
         val stored = repo.sendText(conversationId, body, subId) ?: return
+        handOffText(convo, stored, body, subId)
+    }
+
+    private suspend fun handOffText(convo: Conversation, stored: Message, body: String, subId: Int) {
+        val conversationId = convo.id
         if (settings.soundsEnabled) NotificationHelper.playSentSound(getApplication())
         val recipients = repo.conversationRecipients(conversationId)
             .filter { isPhoneNumber(it) }
@@ -567,19 +626,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val convo = repo.conversationByIdSuspend(conversationId) ?: return@launch
             if (!isPhoneNumber(convo.address)) return@launch
             val stored = repo.sendMedia(conversationId, "image", uri.toString(), caption) ?: return@launch
-            // A group MMS addresses every member in one PDU, unlike SMS which
-            // is sent once per person.
-            val recipients = repo.conversationRecipients(conversationId)
-                .filter { isPhoneNumber(it) }
-                .ifEmpty { listOf(convo.address) }
-            val handedOff = SmsSender.sendMms(
-                getApplication(), stored.id, recipients, uri, subId,
-                stored.body
-            )
-            if (!handedOff) {
-                repo.markMessageStatusSuspend(stored.id, "failed")
-                NotificationHelper.showSendFailed(getApplication(), convo.address)
-            }
+            handOffMedia(convo, stored, uri, subId)
+        }
+    }
+
+    private suspend fun handOffMedia(convo: Conversation, stored: Message, uri: Uri, subId: Int) {
+        val conversationId = convo.id
+        // A group MMS addresses every member in one PDU, unlike SMS which
+        // is sent once per person.
+        val recipients = repo.conversationRecipients(conversationId)
+            .filter { isPhoneNumber(it) }
+            .ifEmpty { listOf(convo.address) }
+        val handedOff = SmsSender.sendMms(
+            getApplication(), stored.id, recipients, uri, subId,
+            stored.body
+        )
+        if (!handedOff) {
+            repo.markMessageStatusSuspend(stored.id, "failed")
+            NotificationHelper.showSendFailed(getApplication(), convo.address)
         }
     }
 
@@ -1021,6 +1085,10 @@ class MainActivity : FragmentActivity() {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            if (Manifest.permission.READ_CONTACTS in grants) {
+                getSharedPreferences("recipient_permissions", MODE_PRIVATE).edit()
+                    .putBoolean("asked_contacts", true).apply()
+            }
             if (grants[Manifest.permission.READ_SMS] == true) {
                 val repo = (application as MessagesApplication).repository
                 if (repo.needsInitialImport) repo.requeryFromSystem()
@@ -1042,6 +1110,14 @@ class MainActivity : FragmentActivity() {
     private var pendingShareMedia by androidx.compose.runtime.mutableStateOf<List<Uri>>(emptyList())
 
     private var lastResumeTime = 0L
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("composer_route", navRoute.takeIf { it in setOf("chat", "new", "opening") } ?: "list")
+        outState.putString("composer_address", pendingOpenAddress)
+        outState.putString("composer_share_body", pendingShareBody)
+        outState.putStringArrayList("composer_share_media", ArrayList(pendingShareMedia.map(Uri::toString)))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1089,7 +1165,14 @@ class MainActivity : FragmentActivity() {
                 this@MainActivity, null, it
             )
         }
-        applyShareIntent(intent)
+        if (savedInstanceState?.containsKey("composer_route") == true) {
+            navRoute = savedInstanceState.getString("composer_route") ?: "list"
+            pendingOpenAddress = savedInstanceState.getString("composer_address")
+            pendingShareBody = savedInstanceState.getString("composer_share_body").orEmpty()
+            pendingShareMedia = savedInstanceState.getStringArrayList("composer_share_media").orEmpty().map(Uri::parse)
+        } else {
+            applyShareIntent(intent)
+        }
 
         val defaultSmsLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -1189,7 +1272,7 @@ class MainActivity : FragmentActivity() {
             }
 
             MessagesTheme(mode = vm.themeMode, font = vm.fontFamily, a11y = vm.a11y) {
-                var chatId by remember { mutableStateOf(-1L) }
+                var chatId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(-1L) }
                 // The home-list query that opened the chat, so the chat can
                 // highlight and scroll to the matching message. Null for every
                 // other way into a chat (new, scheduled, spam, intent).
@@ -1583,6 +1666,16 @@ onOpenAccessibility = { navRoute = "accessibility" },
         if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
     }
 
+    override fun onStart() {
+        super.onStart()
+        androidx.lifecycle.ViewModelProvider(this)[AppViewModel::class.java].startCountdowns()
+    }
+
+    override fun onStop() {
+        androidx.lifecycle.ViewModelProvider(this)[AppViewModel::class.java].stopCountdowns()
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         com.anindra.messages.sms.ForegroundTracker.setAppForeground(true)
@@ -1831,7 +1924,7 @@ onOpenAccessibility = { navRoute = "accessibility" },
             else -> null
         }?.filter { it.scheme == "content" || it.scheme == "file" }
         if (shared.isNullOrEmpty()) return null
-        return shared.mapNotNull(::copyIntoCache).distinct()
+        return shared.mapNotNull { copyComposerAttachment(it) }.distinct()
     }
 
     @Suppress("DEPRECATION")
@@ -1840,51 +1933,42 @@ onOpenAccessibility = { navRoute = "accessibility" },
         return (0 until clip.itemCount).mapNotNull { clip.getItemAt(it)?.uri }
     }
 
-    /**
-     * Copies a shared URI into the cache, returning null if it cannot be read.
-     *
-     * The copy keeps the image's extension. That is load-bearing, not tidiness:
-     * the stored URI is handed to Coil, which asks the resolver for a MIME type,
-     * and `FileProvider` derives that type *from the file name*. An extensionless
-     * copy reports no type, no decoder is chosen, and the bubble renders empty
-     * even though the bytes are a perfectly good image — which is exactly what a
-     * shared photo did before this was fixed.
-     */
-    private fun copyIntoCache(uri: Uri): Uri? {
-        val dir = java.io.File(cacheDir, "shared").apply { mkdirs() }
-        val file = java.io.File(dir, "share-${System.currentTimeMillis()}-${(0..9999).random()}${sharedExtension(uri)}")
-        val copied = runCatching {
-            contentResolver.openInputStream(uri)?.use { input ->
-                file.outputStream().use { input.copyTo(it) }
-                true
-            } ?: false
-        }.getOrDefault(false)
-        if (!copied) {
-            file.delete()
-            return null
-        }
-        return androidx.core.content.FileProvider.getUriForFile(
-            this, "$packageName.fileprovider", file
-        )
-    }
+}
 
-    /**
-     * Extension for the cache copy, taken from the source URI's own extension
-     * and otherwise from the resolved MIME type. Falls back to `.jpg`, matching
-     * how the app already names an untyped attachment.
-     */
-    private fun sharedExtension(uri: Uri): String {
-        val fromPath = uri.lastPathSegment?.substringAfterLast('.', "")
-            ?.takeIf { it.isNotBlank() && it.length <= 5 && it.all(Char::isLetterOrDigit) }
-        if (fromPath != null) return ".$fromPath"
-        val resolved = runCatching { contentResolver.getType(uri) }.getOrNull()
-        val ext = when (MmsSupport.mime(resolved ?: "")) {
-            "image/png" -> ".png"
-            "image/webp" -> ".webp"
-            "image/heic", "image/heif" -> ".heic"
-            "image/gif" -> ".gif"
-            else -> ".jpg"
-        }
-        return ext
+internal fun android.content.Context.copyComposerAttachment(uri: Uri): Uri? {
+    val dir = java.io.File(filesDir, "composer-media").apply { mkdirs() }
+    val file = java.io.File(dir, "share-${System.currentTimeMillis()}-${(0..9999).random()}${sharedExtension(uri)}")
+    val copied = runCatching {
+        contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { input.copyTo(it) }
+            true
+        } ?: false
+    }.getOrDefault(false)
+    if (!copied) {
+        file.delete()
+        return null
     }
+    return androidx.core.content.FileProvider.getUriForFile(
+        this, "$packageName.fileprovider", file
+    )
+}
+
+/**
+ * Extension for the cache copy, taken from the source URI's own extension
+ * and otherwise from the resolved MIME type. Falls back to `.jpg`, matching
+ * how the app already names an untyped attachment.
+ */
+private fun android.content.Context.sharedExtension(uri: Uri): String {
+    val fromPath = uri.lastPathSegment?.substringAfterLast('.', "")
+        ?.takeIf { it.isNotBlank() && it.length <= 5 && it.all(Char::isLetterOrDigit) }
+    if (fromPath != null) return ".$fromPath"
+    val resolved = runCatching { contentResolver.getType(uri) }.getOrNull()
+    val ext = when (MmsSupport.mime(resolved ?: "")) {
+        "image/png" -> ".png"
+        "image/webp" -> ".webp"
+        "image/heic", "image/heif" -> ".heic"
+        "image/gif" -> ".gif"
+        else -> ".jpg"
+    }
+    return ext
 }

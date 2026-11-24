@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">Ещё %d</string>
     <string name="chat_send_now">Отправить сейчас</string>
     <string name="chat_cancel_scheduled">Отменить запланированное сообщение</string>
+    <string name="photo_position">Фото %1$d из %2$d</string>
+    <string name="remove_photo_position">Удалить фото %1$d из %2$d</string>
+    <string name="draft_photo_count">Фото: %d</string>
+    <string name="interrupted_title">Отправка прервана</string>
+    <string name="interrupted_hint">Время ожидания истекло, пока приложение было закрыто. Проверьте сообщение перед отправкой.</string>
+    <string name="contacts_settings_hint">В настройках приложения откройте «Разрешения» → «Контакты» и выберите «Разрешить».</string>
 </resources>

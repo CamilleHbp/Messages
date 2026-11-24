@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">+%d weitere</string>
     <string name="chat_send_now">Jetzt senden</string>
     <string name="chat_cancel_scheduled">Geplante Nachricht abbrechen</string>
+    <string name="photo_position">Foto %1$d von %2$d</string>
+    <string name="remove_photo_position">Foto %1$d von %2$d entfernen</string>
+    <string name="draft_photo_count">%d Fotos</string>
+    <string name="interrupted_title">Senden unterbrochen</string>
+    <string name="interrupted_hint">Die Verzögerung ist abgelaufen, während Messages geschlossen war. Prüfe die Nachricht vor dem Senden.</string>
+    <string name="contacts_settings_hint">Öffne in den App-Einstellungen Berechtigungen → Kontakte und wähle Zulassen.</string>
 </resources>

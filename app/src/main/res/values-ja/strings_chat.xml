@@ -99,4 +99,10 @@
     <string name="chat_scheduled_more">他 %d 件</string>
     <string name="chat_send_now">今すぐ送信</string>
     <string name="chat_cancel_scheduled">送信予約を取り消す</string>
+    <string name="photo_position">%2$d 枚中 %1$d 枚目の写真</string>
+    <string name="remove_photo_position">%2$d 枚中 %1$d 枚目の写真を削除</string>
+    <string name="draft_photo_count">写真 %d 枚</string>
+    <string name="interrupted_title">送信が中断されました</string>
+    <string name="interrupted_hint">アプリを閉じている間に待ち時間が終了しました。送信する前にメッセージを確認してください。</string>
+    <string name="contacts_settings_hint">アプリの設定で「権限」→「連絡先」を開き、「許可」を選択してください。</string>
 </resources>

@@ -64,11 +64,28 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
     val permission = android.Manifest.permission.READ_CONTACTS
     fun hasContactsAccess() = context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     var allowed by remember { mutableStateOf(hasContactsAccess()) }
+    val activity = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
+        .filterIsInstance<android.app.Activity>().firstOrNull()
+    val prefs = remember { context.getSharedPreferences("recipient_permissions", android.content.Context.MODE_PRIVATE) }
+    fun needsSettings() = contactsNeedSettings(
+        hasContactsAccess(), prefs.getBoolean("asked_contacts", false),
+        activity?.shouldShowRequestPermissionRationale(permission) == true
+    )
+    var settingsRequired by remember { mutableStateOf(needsSettings()) }
+    val requestContacts = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        prefs.edit().putBoolean("asked_contacts", true).apply()
+        allowed = granted
+        settingsRequired = needsSettings()
+        if (granted) vm.reloadContacts()
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 allowed = hasContactsAccess()
+                settingsRequired = needsSettings()
                 if (allowed) vm.reloadContacts()
             }
         }
@@ -125,10 +142,13 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
                 Spacer(Modifier.height(SettingsLayout.GROUP_GAP))
             }
             if (!allowed) {
+                if (settingsRequired) Text(stringResource(R.string.contacts_settings_hint),
+                    modifier = Modifier.padding(horizontal = SettingsLayout.SCREEN_PADDING))
                 TextButton(onClick = {
-                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    if (!settingsRequired) requestContacts.launch(permission)
+                    else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         Uri.fromParts("package", context.packageName, null)))
-                }) { Text(stringResource(R.string.recipient_contacts_access)) }
+                }) { Text(stringResource(if (settingsRequired) R.string.conversations_open_settings else R.string.recipient_contacts_access)) }
             } else if (!isPhoneNumber(recipient) && recipient.isNotEmpty() && filtered.isEmpty()) {
                 Text(
                     stringResource(R.string.recipient_no_match, recipient),
@@ -167,3 +187,6 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
         }
     }
 }
+
+internal fun contactsNeedSettings(granted: Boolean, previouslyAsked: Boolean, canAskAgain: Boolean) =
+    !granted && previouslyAsked && !canAskAgain
