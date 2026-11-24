@@ -111,4 +111,5 @@
     <string name="remove_review_photo">हटाएँ</string>
     <string name="review_sim_inactive">चुनी गई सिम अब सक्रिय नहीं है।</string>
     <string name="choose_retry_sim">सिम चुनें</string>
+    <string name="review_missing_remaining">अनुपलब्ध फ़ोटो: %d</string>
 </resources>

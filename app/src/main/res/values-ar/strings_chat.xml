@@ -111,4 +111,5 @@
     <string name="remove_review_photo">إزالة</string>
     <string name="review_sim_inactive">شريحة SIM المحددة لم تعد نشطة.</string>
     <string name="choose_retry_sim">اختيار شريحة SIM</string>
+    <string name="review_missing_remaining">صور غير متاحة: %d</string>
 </resources>

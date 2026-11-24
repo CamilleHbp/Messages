@@ -111,4 +111,5 @@
     <string name="remove_review_photo">削除</string>
     <string name="review_sim_inactive">選択した SIM は無効です。</string>
     <string name="choose_retry_sim">SIM を選択</string>
+    <string name="review_missing_remaining">使用できない写真：%d 枚</string>
 </resources>

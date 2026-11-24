@@ -107,4 +107,5 @@
     <string name="remove_review_photo">移除</string>
     <string name="review_sim_inactive">所選 SIM 卡已停用。</string>
     <string name="choose_retry_sim">選擇 SIM 卡</string>
+    <string name="review_missing_remaining">無法使用的相片：%d 張</string>
 </resources>

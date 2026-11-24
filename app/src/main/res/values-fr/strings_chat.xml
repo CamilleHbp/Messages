@@ -107,4 +107,5 @@
     <string name="remove_review_photo">Supprimer</string>
     <string name="review_sim_inactive">La SIM sélectionnée est inactive.</string>
     <string name="choose_retry_sim">Choisir la SIM</string>
+    <string name="review_missing_remaining">Photos indisponibles : %d</string>
 </resources>

@@ -111,4 +111,5 @@
     <string name="remove_review_photo">Удалить</string>
     <string name="review_sim_inactive">Выбранная SIM-карта больше не активна.</string>
     <string name="choose_retry_sim">Выбрать SIM</string>
+    <string name="review_missing_remaining">Недоступно фото: %d</string>
 </resources>

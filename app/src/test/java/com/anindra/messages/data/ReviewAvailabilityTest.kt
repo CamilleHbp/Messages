@@ -5,6 +5,11 @@ import org.junit.Test
 
 class ReviewAvailabilityTest {
     private val record = ComposerRecord("caption", listOf("a", "b"), 7, ComposerState.REVIEW)
+    @Test fun repairStartsWithTheEarliestUnavailablePhoto() {
+        assertEquals(1, ReviewAvailability(setOf(5, 1), null).firstMissing)
+        assertNull(ReviewAvailability(emptySet(), null).firstMissing)
+    }
+
     @Test fun everyPhotoMustBeReadable() {
         for (missing in listOf(setOf(0), setOf(1), setOf(0, 1))) {
             assertFalse(ReviewAvailability(missing, null).ready(record))
