@@ -91,4 +91,5 @@
     <string name="chat_search_next">下一個符合項</string>
     <string name="chat_search_counter">%1$d/%2$d</string>
     <string name="chat_scroll_to_latest">跳至最新訊息</string>
+    <string name="contacts_settings_hint">在應用程式設定中開啟「權限」→「聯絡人」，然後選擇「允許」。</string>
 </resources>

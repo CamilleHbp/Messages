@@ -95,4 +95,5 @@
     <string name="chat_search_next">Coincidencia siguiente</string>
     <string name="chat_search_counter">%1$d de %2$d</string>
     <string name="chat_scroll_to_latest">Ir al mensaje más reciente</string>
+    <string name="contacts_settings_hint">En los ajustes de la aplicación, abre Permisos → Contactos y selecciona Permitir.</string>
 </resources>

@@ -958,6 +958,10 @@ class MainActivity : FragmentActivity() {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            if (Manifest.permission.READ_CONTACTS in grants) {
+                getSharedPreferences("recipient_permissions", MODE_PRIVATE).edit()
+                    .putBoolean("asked_contacts", true).apply()
+            }
             if (grants[Manifest.permission.READ_SMS] == true) {
                 val repo = (application as MessagesApplication).repository
                 if (repo.needsInitialImport) repo.requeryFromSystem()

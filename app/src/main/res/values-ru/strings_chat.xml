@@ -95,4 +95,5 @@
     <string name="chat_search_next">Следующее совпадение</string>
     <string name="chat_search_counter">%1$d из %2$d</string>
     <string name="chat_scroll_to_latest">К последнему сообщению</string>
+    <string name="contacts_settings_hint">В настройках приложения откройте «Разрешения» → «Контакты» и выберите «Разрешить».</string>
 </resources>

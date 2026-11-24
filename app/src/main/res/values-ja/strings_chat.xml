@@ -95,4 +95,5 @@
     <string name="chat_search_next">次の一致</string>
     <string name="chat_search_counter">%1$d/%2$d</string>
     <string name="chat_scroll_to_latest">最新のメッセージへ移動</string>
+    <string name="contacts_settings_hint">アプリの設定で「権限」→「連絡先」を開き、「許可」を選択してください。</string>
 </resources>
