@@ -110,4 +110,10 @@
     <string name="review_recipient">Кому: %1$s</string>
     <string name="draft_one_photo">1 фото</string>
     <string name="choose_retry_sim">Выбрать SIM</string>
+    <string name="retry_failed">Повторить неудачные</string>
+    <string name="review_members">Получателей: %d</string>
+    <string name="missing_review_photo">Фото %1$d из %2$d недоступно</string>
+    <string name="replace_review_photo">Заменить</string>
+    <string name="remove_review_photo">Удалить</string>
+    <string name="review_sim_inactive">Выбранная SIM-карта больше не активна.</string>
 </resources>

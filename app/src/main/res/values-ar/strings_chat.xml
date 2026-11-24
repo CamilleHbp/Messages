@@ -110,4 +110,10 @@
     <string name="review_recipient">إلى %1$s</string>
     <string name="draft_one_photo">صورة واحدة</string>
     <string name="choose_retry_sim">اختيار شريحة SIM</string>
+    <string name="retry_failed">إعادة محاولة الإرسال الفاشل</string>
+    <string name="review_members">عدد المستلمين: %d</string>
+    <string name="missing_review_photo">الصورة %1$d من %2$d غير متاحة</string>
+    <string name="replace_review_photo">استبدال</string>
+    <string name="remove_review_photo">إزالة</string>
+    <string name="review_sim_inactive">شريحة SIM المحددة لم تعد نشطة.</string>
 </resources>

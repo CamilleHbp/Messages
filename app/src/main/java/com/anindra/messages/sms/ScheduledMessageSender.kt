@@ -76,6 +76,10 @@ class ScheduledMessageSender : BroadcastReceiver() {
                     val recipients = repo.conversationRecipients(scheduled.conversationId)
                         .ifEmpty { listOf(scheduled.address) }
                         .filter { com.anindra.messages.ui.isPhoneNumber(it) && !repo.isAddressBlocked(it) }
+                    if (recipients.size > 1) {
+                        SmsSender.sendGroup(context, repo, stored, recipients)
+                        return@runCatching true
+                    }
                     val results = recipients.map { address ->
                         SmsSender.send(
                             context, stored.id, address, stored.body, stored.subId,

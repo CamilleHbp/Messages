@@ -35,10 +35,6 @@ class PendingMediaWiringTest {
             "the gallery must use the multi-select picker",
             chat.contains("ActivityResultContracts.PickMultipleVisualMedia()"),
         )
-        assertFalse(
-            "the single-select gallery picker must be gone",
-            chat.contains("ActivityResultContracts.PickVisualMedia()"),
-        )
     }
 
     @Test

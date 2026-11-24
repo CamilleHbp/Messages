@@ -559,6 +559,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    internal fun editReview(id: Long, previous: ComposerRecord, next: ComposerRecord) {
+        if (previous.state == ComposerState.REVIEW && compositions[id] == previous) persist(id, next)
+    }
+
     internal fun confirmReviewedSend(id: Long, reviewed: ComposerRecord) {
         if (reviewed.state == ComposerState.REVIEW && compositions[id] == reviewed) dispatchComposer(id, reviewed)
     }
@@ -605,9 +609,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val recipients = repo.conversationRecipients(conversationId)
             .filter { isPhoneNumber(it) }
             .ifEmpty { listOf(convo.address) }
-        // A group is one stored message sent once per recipient. The row is
-        // marked failed only when every hand-off failed, since a partial
-        // send is still a send.
+        if (recipients.size > 1) {
+            SmsSender.sendGroup(getApplication(), repo, stored, recipients)
+            return
+        }
         val results = recipients.map { address ->
             SmsSender.send(
                 getApplication(), stored.id, address, body,
@@ -686,6 +691,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val convo = repo.conversationByIdSuspend(msg.conversationId) ?: return@launch
             if (!isPhoneNumber(convo.address)) return@launch
             val retry = msg.forRetry(selectedSim)
+            if (msg.recipientSends.isNotEmpty()) {
+                SmsSender.sendGroup(getApplication(), repo, retry, emptyList(), retry = true)
+                return@launch
+            }
             if (!repo.claimFailedSend(messageId, retry.subId)) return@launch
             if (retry.mediaType == "image") handOffMedia(convo, retry, Uri.parse(retry.mediaUri), retry.subId)
             else handOffText(convo, retry, retry.body, retry.subId)

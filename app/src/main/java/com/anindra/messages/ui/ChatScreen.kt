@@ -1,5 +1,7 @@
 package com.anindra.messages.ui
 
+import com.anindra.messages.data.ReviewAvailability
+import com.anindra.messages.data.RecipientSend
 import com.anindra.messages.copyComposerAttachment
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.Manifest
@@ -255,6 +257,35 @@ internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) 
     }
 }
 
+@Composable
+internal fun GroupSendActions(rows: List<RecipientSend>, onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val labels = mapOf(
+        "sent" to stringResource(R.string.message_status_sent),
+        "delivered" to stringResource(R.string.message_status_delivered),
+        "failed" to stringResource(R.string.transfer_log_status_failed),
+        "sending" to stringResource(R.string.status_sending)
+    )
+    val summary = labels.mapNotNull { (state, label) ->
+        rows.count { it.status == state }.takeIf { it > 0 }?.let { "$it $label" }
+    }.joinToString(" · ")
+    Column {
+        TextButton(onClick = { expanded = !expanded }) { Text(summary) }
+        if (expanded) rows.forEach { row ->
+            Text("${BidiText.ltr(formatPhoneNumber(row.address))} · ${labels[row.status]}",
+                style = MaterialTheme.typography.bodySmall)
+        }
+        if (rows.any { it.failed }) {
+            androidx.compose.foundation.layout.FlowRow {
+                TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.retry_failed))
+                }
+                if (onChooseSim != null) TextButton(onClick = onChooseSim) { Text(stringResource(R.string.choose_retry_sim)) }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatBubble(
@@ -422,18 +453,23 @@ internal fun ChatBubble(
                             onLongClick = { onLongPress() }
                         )
                     ) {
-                        Text(
-                            text = bodyText,
-                            style = MaterialTheme.typography.bodyLarge.merge(
-                                TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
-                            ),
-                            modifier = Modifier
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                .semantics {
-                                    if (isSearchFocus) contentDescription =
-                                        A11y.describe(bodyText.text, searchResultLabel)
-                                }
-                        )
+                        Column {
+                            Text(
+                                text = bodyText,
+                                style = MaterialTheme.typography.bodyLarge.merge(
+                                    TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
+                                ),
+                                modifier = Modifier
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    .semantics {
+                                        if (isSearchFocus) contentDescription =
+                                            A11y.describe(bodyText.text, searchResultLabel)
+                                    }
+                            )
+                            if (msg.recipientSends.isNotEmpty() && msg.isMe && !isLockedAndHidden) {
+                                GroupSendActions(msg.recipientSends, onRetry, onChooseSim)
+                            }
+                        }
                     }
                 }
 
@@ -474,7 +510,7 @@ internal fun ChatBubble(
                 )
             }
 
-            if (msg.status == "failed" && msg.isMe) {
+            if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
                 FailedSendActions(onRetry, onChooseSim)
             } else if (showTime) {
                 // Google shows the type only on your own messages.
@@ -740,7 +776,7 @@ fun ChatScreen(
     val pending = vm.pendingSend(conversationId)
     val sendCountdown = vm.sendCountdowns[conversationId] ?: 0
     val needsReview = pending?.state == ComposerState.REVIEW
-    var reviewDialog by remember(conversationId) { mutableStateOf(false) }
+    var reviewDialog by rememberSaveable(conversationId) { mutableStateOf(false) }
     val visibleMedia = pending?.media?.map(Uri::parse) ?: pendingMedia
     fun cancelDelayedSend() {
         val canceled = vm.cancelSend(conversationId) ?: return
@@ -1612,7 +1648,39 @@ fun ChatScreen(
     }
 
     if (reviewDialog && needsReview && pending != null) {
+        val reviewScope = rememberCoroutineScope()
         var enlargedPhoto by rememberSaveable { mutableStateOf<String?>(null) }
+        var availability by remember(pending) { mutableStateOf<ReviewAvailability?>(null) }
+        var checking by remember(pending) { mutableStateOf(false) }
+        var revision by remember { mutableIntStateOf(0) }
+        androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+            revision++
+            onPauseOrDispose { availability = null }
+        }
+        LaunchedEffect(pending, revision) { availability = ReviewAvailability.inspect(context, pending) }
+        var expandedMembers by rememberSaveable { mutableStateOf(false) }
+        var members by remember(conversationId, membershipRevision) { mutableStateOf(emptyList<Pair<String, String?>>()) }
+        LaunchedEffect(conversationId, membershipRevision, revision) {
+            members = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                vm.conversationRecipients(conversationId).filter(::isPhoneNumber).map { it to vm.contactNameFor(it) }
+            }
+        }
+        var replaceIndex by rememberSaveable { mutableIntStateOf(-1) }
+        var replaceUri by rememberSaveable { mutableStateOf<String?>(null) }
+        val replacement = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            val index = replaceIndex
+            if (uri != null && pending.media.getOrNull(index) == replaceUri && index in pending.media.indices) {
+                reviewScope.launch {
+                    val saved = withContext(kotlinx.coroutines.Dispatchers.IO) { context.copyComposerAttachment(uri) }
+                    if (saved != null) vm.editReview(conversationId, pending,
+                        pending.copy(media = pending.media.toMutableList().apply { set(index, saved.toString()) }))
+                    else Toast.makeText(context, R.string.chat_image_save_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            replaceIndex = -1
+            replaceUri = null
+        }
+        var choosingSim by remember { mutableStateOf(false) }
         AlertDialog(onDismissRequest = { reviewDialog = false },
             title = { Text(stringResource(R.string.review_message)) },
             text = {
@@ -1624,13 +1692,36 @@ fun ChatScreen(
                             Text(BidiText.ltr(thread.display), style = MaterialTheme.typography.bodySmall)
                         }
                     }
+                    if (members.size > 1) {
+                        TextButton(onClick = { expandedMembers = !expandedMembers }) {
+                            Text(stringResource(R.string.review_members, members.size))
+                        }
+                        if (expandedMembers) members.forEach { (number, name) ->
+                            Text(listOfNotNull(name?.takeUnless { it == number }, BidiText.ltr(formatPhoneNumber(number))).joinToString(" · "))
+                        }
+                    }
                     if (pending.draft.isNotBlank()) Text(pending.draft)
                     if (pending.media.isNotEmpty()) {
                         Text(photoCountLabel(context, pending.media.size))
                         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(pending.media.size) { index ->
                                 val photo = pending.media[index]
-                                coil3.compose.AsyncImage(model = photo,
+                                if (availability?.missing?.contains(index) == true) {
+                                    Column {
+                                        Text(stringResource(R.string.missing_review_photo, index + 1, pending.media.size))
+                                        Row {
+                                            TextButton(onClick = {
+                                                replaceIndex = index
+                                                replaceUri = photo
+                                                replacement.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            }) { Text(stringResource(R.string.replace_review_photo)) }
+                                            TextButton(onClick = {
+                                                vm.editReview(conversationId, pending, pending.copy(media =
+                                                    pending.media.filterIndexed { i, _ -> i != index }))
+                                            }) { Text(stringResource(R.string.remove_review_photo)) }
+                                        }
+                                    }
+                                } else coil3.compose.AsyncImage(model = photo,
                                     contentDescription = stringResource(R.string.photo_position, index + 1, pending.media.size),
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
@@ -1638,20 +1729,44 @@ fun ChatScreen(
                             }
                         }
                     }
-                    val sim = sims.firstOrNull { it.subscriptionId == pending.simId }
-                    if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
+                    val active = availability?.active.orEmpty()
+                    val sim = active.firstOrNull { it.subscriptionId == pending.simId }
+                    if (availability?.inactive(pending.simId) == true) {
+                        Text(stringResource(R.string.review_sim_inactive))
+                        if (active.isNotEmpty()) TextButton(onClick = { choosingSim = true }) {
+                            Text(stringResource(R.string.choose_retry_sim))
+                        }
+                    } else if (sim != null) Text(stringResource(R.string.settings_sim_label, sim.slotIndex + 1))
                     else if (pending.simId >= 0) Text(stringResource(R.string.settings_sim_unknown))
                     else if (sims.size > 1) Text(stringResource(R.string.settings_sim_default))
                 }
             },
-            confirmButton = { TextButton(onClick = {
-                reviewDialog = false
-                vm.confirmReviewedSend(conversationId, pending)
+            confirmButton = { TextButton(enabled = !checking && members.isNotEmpty() && availability?.ready(pending) == true, onClick = {
+                checking = true
+                reviewScope.launch {
+                    val checked = ReviewAvailability.inspect(context, pending)
+                    availability = checked
+                    checking = false
+                    if (checked.ready(pending) && vm.pendingSend(conversationId) == pending) {
+                        reviewDialog = false
+                        vm.confirmReviewedSend(conversationId, pending)
+                    }
+                }
             }) { Text(stringResource(R.string.chat_send_now)) } },
             dismissButton = { TextButton(onClick = {
                 cancelDelayedSend()
                 reviewDialog = false
             }) { Text(stringResource(R.string.keep_as_draft)) } })
+        if (choosingSim) AlertDialog(onDismissRequest = { choosingSim = false },
+            title = { Text(stringResource(R.string.choose_retry_sim)) },
+            text = { Column { availability?.active.orEmpty().forEach { card ->
+                TextButton(onClick = {
+                    vm.editReview(conversationId, pending, pending.copy(simId = card.subscriptionId))
+                    choosingSim = false
+                }) { Text(listOfNotNull(stringResource(R.string.settings_sim_label, card.slotIndex + 1),
+                    card.carrierName?.takeIf(String::isNotBlank)).joinToString(" · ")) }
+            } } }, confirmButton = {},
+            dismissButton = { TextButton(onClick = { choosingSim = false }) { Text(stringResource(R.string.chat_cancel)) } })
         enlargedPhoto?.let { photo ->
             androidx.compose.ui.window.Dialog(onDismissRequest = { enlargedPhoto = null },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
@@ -2564,20 +2679,25 @@ fun MessageRow(
                         onLongClick = { onLongPress() }
                     )
                 ) {
-                    Text(
-                        text = bodyText,
-                        style = MaterialTheme.typography.bodyLarge.merge(
-                            TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
-                        ),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                    )
+                    Column {
+                        Text(
+                            text = bodyText,
+                            style = MaterialTheme.typography.bodyLarge.merge(
+                                TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
+                            ),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                        if (msg.recipientSends.isNotEmpty() && msg.isMe && !isLockedAndHidden) {
+                            GroupSendActions(msg.recipientSends, onRetry, onChooseSim)
+                        }
+                    }
                 }
             }
         }
 
         val simLabelFinal = simLabel
 
-        if (msg.status == "failed" && msg.isMe) {
+        if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
             FailedSendActions(onRetry, onChooseSim)
         } else {
             val statusText = if (msg.isMe) {

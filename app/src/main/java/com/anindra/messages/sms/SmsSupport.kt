@@ -503,40 +503,56 @@ object SmsSender {
         address: String,
         body: String,
         subscriptionId: Int = -1,
-        wantDeliveryReport: Boolean = false
+        wantDeliveryReport: Boolean = false,
+        attempt: Int = 0
     ): Boolean = try {
         val sm = manager(context, subscriptionId)
-        val sent = PendingIntent.getBroadcast(
-            context, (messageId % Int.MAX_VALUE).toInt(),
-            Intent(SmsStatusReceiver.ACTION_SMS_SENT)
-                .setPackage(context.packageName)
-                .setComponent(android.content.ComponentName(context, SmsStatusReceiver::class.java))
-                .putExtra(SmsStatusReceiver.EXTRA_MESSAGE_ID, messageId),
-            PendingIntent.FLAG_IMMUTABLE
-        )
-        val delivered = if (wantDeliveryReport) PendingIntent.getBroadcast(
-            context, (messageId % Int.MAX_VALUE).toInt(),
-            Intent(SmsStatusReceiver.ACTION_SMS_DELIVERED)
-                .setPackage(context.packageName)
-                .setComponent(android.content.ComponentName(context, SmsStatusReceiver::class.java))
-                .putExtra(SmsStatusReceiver.EXTRA_MESSAGE_ID, messageId),
-            PendingIntent.FLAG_IMMUTABLE
-        ) else null
-
         val parts = sm.divideMessage(body)
+        fun callback(action: String, part: Int): PendingIntent {
+            val intent = Intent(action)
+                .setPackage(context.packageName)
+                .setComponent(android.content.ComponentName(context, SmsStatusReceiver::class.java))
+                .putExtra(SmsStatusReceiver.EXTRA_MESSAGE_ID, messageId)
+            if (attempt > 0) {
+                intent.data = android.net.Uri.Builder().scheme("messages-status").authority("group")
+                    .appendPath(messageId.toString()).appendPath(address).appendPath(attempt.toString())
+                    .appendPath(part.toString()).build()
+                intent.putExtra("recipient", address).putExtra("attempt", attempt)
+                    .putExtra("part", part).putExtra("count", parts.size.coerceAtLeast(1))
+            }
+            val mutableReceipt = attempt > 0 && action == SmsStatusReceiver.ACTION_SMS_DELIVERED
+            val flags = when {
+                !mutableReceipt -> PendingIntent.FLAG_IMMUTABLE
+                android.os.Build.VERSION.SDK_INT >= 31 -> PendingIntent.FLAG_MUTABLE
+                else -> 0
+            }
+            return PendingIntent.getBroadcast(context, (messageId % Int.MAX_VALUE).toInt(), intent, flags)
+        }
+        val indices = if (attempt > 0 && parts.isNotEmpty()) parts.indices else 0..0
+        val sent = ArrayList(indices.map { callback(SmsStatusReceiver.ACTION_SMS_SENT, it) })
+        val delivered = if (wantDeliveryReport) ArrayList(indices.map { callback(SmsStatusReceiver.ACTION_SMS_DELIVERED, it) }) else null
         val dest = normalizeAddress(address)
         if (parts.size <= 1) {
-            sm.sendTextMessage(dest, null, body, sent, delivered)
+            sm.sendTextMessage(dest, null, body, sent.first(), delivered?.first())
         } else {
             sm.sendMultipartTextMessage(
                 dest, null, parts,
-                ArrayList(listOf(sent)),
-                delivered?.let { ArrayList(listOf(it)) }
+                sent, delivered
             )
         }
         true
     } catch (_: Exception) {
         false
+    }
+
+    suspend fun sendGroup(context: Context, repo: com.anindra.messages.data.Repository, msg: com.anindra.messages.data.Message,
+        recipients: List<String>, retry: Boolean = false) {
+        for (target in repo.claimGroupRecipients(msg.id, recipients, retry, msg.subId)) {
+            if (repo.isAddressBlocked(target.address) || !send(context, msg.id, target.address, msg.body,
+                    msg.subId, repo.settings.deliveryReportsEnabled, target.attempt)) {
+                repo.recordGroupResult(msg.id, target.address, target.attempt, 0, 1, false, false)
+            }
+        }
     }
 
     /**

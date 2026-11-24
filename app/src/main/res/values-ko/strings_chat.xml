@@ -110,4 +110,10 @@
     <string name="review_recipient">받는 사람: %1$s</string>
     <string name="draft_one_photo">사진 1장</string>
     <string name="choose_retry_sim">SIM 선택</string>
+    <string name="retry_failed">실패한 항목 다시 보내기</string>
+    <string name="review_members">받는 사람 %d명</string>
+    <string name="missing_review_photo">사진 %2$d장 중 %1$d번째 사진을 사용할 수 없습니다</string>
+    <string name="replace_review_photo">교체</string>
+    <string name="remove_review_photo">삭제</string>
+    <string name="review_sim_inactive">선택한 SIM이 더 이상 활성 상태가 아닙니다.</string>
 </resources>

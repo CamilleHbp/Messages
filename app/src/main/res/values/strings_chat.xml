@@ -110,4 +110,10 @@
     <string name="review_recipient">To %1$s</string>
     <string name="draft_one_photo">1 photo</string>
     <string name="choose_retry_sim">Choose SIM</string>
+    <string name="retry_failed">Retry failed</string>
+    <string name="review_members">%d recipients</string>
+    <string name="missing_review_photo">Photo %1$d of %2$d is unavailable</string>
+    <string name="replace_review_photo">Replace</string>
+    <string name="remove_review_photo">Remove</string>
+    <string name="review_sim_inactive">The selected SIM is no longer active.</string>
 </resources>

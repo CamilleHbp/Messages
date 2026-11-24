@@ -329,3 +329,10 @@ private fun ForwardPickerPreview() {
 private fun FailedSendActionsPreview() {
     MessagesTheme { FailedSendActions({}, {}) }
 }
+
+@PreviewLightDark
+@Composable
+private fun GroupSendActionsPreview() {
+    MessagesTheme { com.anindra.messages.ui.GroupSendActions(listOf(
+        com.anindra.messages.data.RecipientSend("+15550123", failed = true)), {}, null) }
+}
