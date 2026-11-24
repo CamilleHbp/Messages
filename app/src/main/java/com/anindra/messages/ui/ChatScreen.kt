@@ -1,5 +1,6 @@
 package com.anindra.messages.ui
 
+import com.anindra.messages.data.RecipientSend
 import com.anindra.messages.copyComposerAttachment
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.Manifest
@@ -261,6 +262,35 @@ internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) 
     }
 }
 
+@Composable
+internal fun GroupSendActions(rows: List<RecipientSend>, onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val labels = mapOf(
+        "sent" to stringResource(R.string.message_status_sent),
+        "delivered" to stringResource(R.string.message_status_delivered),
+        "failed" to stringResource(R.string.transfer_log_status_failed),
+        "sending" to stringResource(R.string.status_sending)
+    )
+    val summary = labels.mapNotNull { (state, label) ->
+        rows.count { it.status == state }.takeIf { it > 0 }?.let { "$it $label" }
+    }.joinToString(" · ")
+    Column {
+        TextButton(onClick = { expanded = !expanded }) { Text(summary) }
+        if (expanded) rows.forEach { row ->
+            Text("${BidiText.ltr(formatPhoneNumber(row.address))} · ${labels[row.status]}",
+                style = MaterialTheme.typography.bodySmall)
+        }
+        if (rows.any { it.failed }) {
+            androidx.compose.foundation.layout.FlowRow {
+                TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.retry_failed))
+                }
+                if (onChooseSim != null) TextButton(onClick = onChooseSim) { Text(stringResource(R.string.choose_retry_sim)) }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatBubble(
@@ -428,18 +458,23 @@ internal fun ChatBubble(
                             onLongClick = { onLongPress() }
                         )
                     ) {
-                        Text(
-                            text = bodyText,
-                            style = MaterialTheme.typography.bodyLarge.merge(
-                                TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
-                            ),
-                            modifier = Modifier
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                .semantics {
-                                    if (isSearchFocus) contentDescription =
-                                        A11y.describe(bodyText.text, searchResultLabel)
-                                }
-                        )
+                        Column {
+                            Text(
+                                text = bodyText,
+                                style = MaterialTheme.typography.bodyLarge.merge(
+                                    TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
+                                ),
+                                modifier = Modifier
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    .semantics {
+                                        if (isSearchFocus) contentDescription =
+                                            A11y.describe(bodyText.text, searchResultLabel)
+                                    }
+                            )
+                            if (msg.recipientSends.isNotEmpty() && msg.isMe && !isLockedAndHidden) {
+                                GroupSendActions(msg.recipientSends, onRetry, onChooseSim)
+                            }
+                        }
                     }
                 }
 
@@ -480,7 +515,7 @@ internal fun ChatBubble(
                 )
             }
 
-            if (msg.status == "failed" && msg.isMe) {
+            if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
                 FailedSendActions(onRetry, onChooseSim)
             } else if (showTime) {
                 // Google shows the type only on your own messages.
@@ -2607,20 +2642,25 @@ fun MessageRow(
                         onLongClick = { onLongPress() }
                     )
                 ) {
-                    Text(
-                        text = bodyText,
-                        style = MaterialTheme.typography.bodyLarge.merge(
-                            TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
-                        ),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                    )
+                    Column {
+                        Text(
+                            text = bodyText,
+                            style = MaterialTheme.typography.bodyLarge.merge(
+                                TextStyle(color = if (isSelected) cs.onSelectedBubble else if (msg.isMe) cs.onPrimaryContainer else cs.onSurface)
+                            ),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                        if (msg.recipientSends.isNotEmpty() && msg.isMe && !isLockedAndHidden) {
+                            GroupSendActions(msg.recipientSends, onRetry, onChooseSim)
+                        }
+                    }
                 }
             }
         }
 
         val simLabelFinal = simLabel
 
-        if (msg.status == "failed" && msg.isMe) {
+        if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
             FailedSendActions(onRetry, onChooseSim)
         } else {
             val statusText = if (msg.isMe) {

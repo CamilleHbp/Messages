@@ -106,4 +106,5 @@
     <string name="review_recipient">Кому: %1$s</string>
     <string name="draft_one_photo">1 фото</string>
     <string name="choose_retry_sim">Выбрать SIM</string>
+    <string name="retry_failed">Повторить неудачные</string>
 </resources>

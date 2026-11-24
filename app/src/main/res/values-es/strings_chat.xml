@@ -106,4 +106,5 @@
     <string name="review_recipient">Para %1$s</string>
     <string name="draft_one_photo">1 foto</string>
     <string name="choose_retry_sim">Elegir SIM</string>
+    <string name="retry_failed">Reintentar fallidos</string>
 </resources>

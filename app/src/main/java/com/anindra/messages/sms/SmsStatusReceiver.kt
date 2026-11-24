@@ -39,6 +39,16 @@ class SmsStatusReceiver : BroadcastReceiver() {
                     action == SystemMmsTransport.ACTION_SEND_SENT -> mms(
                         repo, context, intent, resultCodeSnapshot
                     )
+                    intent.hasExtra("recipient") && action in setOf(ACTION_SMS_SENT, ACTION_SMS_DELIVERED) -> {
+                        val address = intent.getStringExtra("recipient") ?: return@launch
+                        val mirror = repo.recordGroupResult(messageId, address, intent.getIntExtra("attempt", 0),
+                            intent.getIntExtra("part", -1), intent.getIntExtra("count", 0),
+                            action == ACTION_SMS_DELIVERED, resultCodeSnapshot == Activity.RESULT_OK &&
+                                (action != ACTION_SMS_DELIVERED || confirmsDelivery(intent)))
+                        if (mirror) repo.messageByIdSuspend(messageId)?.let {
+                            repo.writeSentToSystem(address, it.body, it.subId, messageId)
+                        }
+                    }
                     resultCodeSnapshot != Activity.RESULT_OK -> fail(repo, context, messageId)
                     action == ACTION_SMS_DELIVERED ->
                         repo.markMessageStatusSuspend(messageId, "delivered")
@@ -92,6 +102,13 @@ class SmsStatusReceiver : BroadcastReceiver() {
         MmsTrace.i("MmsSend", "MMS result applied id=$messageId ok=$ok")
         if (ok) repo.markMessageStatusSuspend(messageId, "sent")
         else fail(repo, context, messageId)
+    }
+
+    private fun confirmsDelivery(intent: Intent): Boolean {
+        val pdu = intent.getByteArrayExtra("pdu") ?: return false
+        val format = intent.getStringExtra("format") ?: return false
+        val report = android.telephony.SmsMessage.createFromPdu(pdu, format) ?: return false
+        return report.isStatusReportMessage && report.status == 0
     }
 
     private suspend fun sent(repo: Repository, messageId: Long) {

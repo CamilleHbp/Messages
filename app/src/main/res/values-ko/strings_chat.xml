@@ -106,4 +106,5 @@
     <string name="review_recipient">받는 사람: %1$s</string>
     <string name="draft_one_photo">사진 1장</string>
     <string name="choose_retry_sim">SIM 선택</string>
+    <string name="retry_failed">실패한 항목 다시 보내기</string>
 </resources>

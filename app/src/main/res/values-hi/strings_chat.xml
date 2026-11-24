@@ -106,4 +106,5 @@
     <string name="review_recipient">प्राप्तकर्ता: %1$s</string>
     <string name="draft_one_photo">1 फ़ोटो</string>
     <string name="choose_retry_sim">सिम चुनें</string>
+    <string name="retry_failed">विफल संदेश फिर भेजें</string>
 </resources>

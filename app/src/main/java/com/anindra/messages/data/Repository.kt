@@ -60,7 +60,7 @@ private const val IMPORT_PROGRESS_EVERY = 250
 /** Tag for the MMS provider-import trace; see com.anindra.messages.sms.MmsTrace. */
 private const val TRACE = "MmsImport"
 
-private const val DB_VERSION = 29
+private const val DB_VERSION = 30
 private const val PREFS_NAME = "messages_schema"
 private const val PREF_HEAL_APPLIED = "heal_v1_applied"
 
@@ -147,6 +147,7 @@ class Db(context: Context) :
         db.execSQL("ALTER TABLE conversations ADD COLUMN group_title_custom INTEGER NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE messages ADD COLUMN address TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE messages ADD COLUMN recipient_sends TEXT NOT NULL DEFAULT ''")
         createConversationRecipients(db)
         createMessageProviderIds(db)
     }
@@ -329,6 +330,7 @@ class Db(context: Context) :
         if (oldVersion < 27) {
             healInflatedTimestamps(db)
         }
+        if (oldVersion < 30) db.execSQL("ALTER TABLE messages ADD COLUMN recipient_sends TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 29) db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 28) {
             // A group name the user typed must survive, while the default name
@@ -653,7 +655,7 @@ class Repository(private val context: Context) {
         val out = mutableListOf<Message>()
         db.readableDatabase.rawQuery(
             """SELECT id,body,timestamp,is_me,status,media_type,media_uri,reactions,locked,sub_id,
-               transport,delivered_at,address FROM messages
+               transport,delivered_at,address,recipient_sends FROM messages
                WHERE conversation_id=? AND deleted_at=0 ORDER BY timestamp DESC LIMIT ? OFFSET ?""",
             arrayOf(conversationId.toString(), limit.toString(), offset.toString())
         ).use { c ->
@@ -673,7 +675,8 @@ class Repository(private val context: Context) {
                         subId = c.getInt(9),
                         transport = c.getString(10),
                         deliveredAt = c.getLong(11),
-                        address = c.getString(12).orEmpty()
+                        address = c.getString(12).orEmpty(),
+                        recipientSends = RecipientSend.decode(c.getString(13))
                     )
                 )
             }
@@ -3248,6 +3251,53 @@ class Repository(private val context: Context) {
         }
     }
 
+    private fun updateRecipientSends(id: Long, sim: Int?, change: (List<RecipientSend>) -> List<RecipientSend>): Boolean {
+        val database = db.writableDatabase
+        database.beginTransaction()
+        try {
+            val old = database.rawQuery("SELECT recipient_sends FROM messages WHERE id=? AND deleted_at=0",
+                arrayOf(id.toString())).use { if (it.moveToFirst()) RecipientSend.decode(it.getString(0)) else return false }
+            val next = change(old)
+            if (next == old) return false
+            val status = RecipientSend.aggregate(next)
+            database.update("messages", ContentValues().apply {
+                put("recipient_sends", RecipientSend.encode(next))
+                put("status", status)
+                if (status == "delivered") put("delivered_at", System.currentTimeMillis())
+                if (sim != null) put("sub_id", sim)
+            }, "id=?", arrayOf(id.toString()))
+            database.setTransactionSuccessful()
+        } finally {
+            database.endTransaction()
+        }
+        notifyChanged()
+        return true
+    }
+
+    suspend fun claimGroupRecipients(id: Long, addresses: List<String>, retry: Boolean, sim: Int): List<RecipientSend> = runOnIoAsync {
+        val claimed = mutableListOf<RecipientSend>()
+        val changed = updateRecipientSends(id, sim) { old ->
+            if (retry) old.map {
+                if (it.failed) RecipientSend(it.address, it.attempt + 1).also(claimed::add) else it
+            } else if (old.isEmpty()) addresses.distinct().map { RecipientSend(it).also(claimed::add) }
+            else old
+        }
+        if (changed) claimed else emptyList()
+    }
+
+    suspend fun recordGroupResult(id: Long, address: String, attempt: Int, part: Int, count: Int,
+        receipt: Boolean, ok: Boolean): Boolean = runOnIoAsync {
+        var newlySent = false
+        updateRecipientSends(id, null) { rows ->
+            rows.map { old ->
+                if (old.address != address) old else old.result(attempt, part, count, receipt, ok).also { next ->
+                    newlySent = old.sent.size < old.parts && next.sent.size == next.parts && !next.failed
+                }
+            }
+        }
+        newlySent
+    }
+
     suspend fun claimFailedSend(id: Long, simId: Int): Boolean = runOnIoAsync {
         val changed = db.writableDatabase.update("messages", ContentValues().apply {
             put("status", "sending")
@@ -3260,7 +3310,7 @@ class Repository(private val context: Context) {
     suspend fun messageByIdSuspend(messageId: Long): Message? = runOnIoAsync {
         var found: Message? = null
         db.readableDatabase.rawQuery(
-            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions,sub_id
+            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions,sub_id,recipient_sends
                FROM messages WHERE id=?""",
             arrayOf(messageId.toString())
         ).use { c ->
@@ -3274,7 +3324,8 @@ class Repository(private val context: Context) {
                 mediaType = c.getString(5),
                 mediaUri = c.getString(6),
                 reactions = parseReactions(c.getString(7)),
-                subId = c.getInt(8)
+                subId = c.getInt(8),
+                recipientSends = RecipientSend.decode(c.getString(9))
             )
         }
         found
@@ -4260,7 +4311,7 @@ class Repository(private val context: Context) {
 
     /** Writes an outgoing SMS into the system Sent box (required when default app)
      *  and links the new provider id to our local row, preventing re-import dups. */
-    fun writeSentToSystem(address: String, body: String, subId: Int = -1) {
+    fun writeSentToSystem(address: String, body: String, subId: Int = -1, groupMessageId: Long? = null) {
         try {
             val now = System.currentTimeMillis()
             val cv = ContentValues().apply {
@@ -4278,6 +4329,13 @@ class Repository(private val context: Context) {
                 android.provider.Telephony.Sms.Sent.CONTENT_URI, cv
             )?.lastPathSegment?.toLongOrNull() ?: -1L
             if (sysId > 0) {
+                if (groupMessageId != null) {
+                    db.writableDatabase.execSQL("INSERT OR IGNORE INTO message_provider_ids(message_id,transport,sys_id) VALUES(?,'sms',?)",
+                        arrayOf(groupMessageId, sysId))
+                    db.writableDatabase.execSQL("UPDATE messages SET sys_id=? WHERE id=? AND sys_id=0",
+                        arrayOf(sysId, groupMessageId))
+                    return
+                }
                 // Pick the message we just created: same body+is_me+sys_id=0, most recent
                 // for that conversation. The (conversation_id, timestamp DESC) index
                 // makes this O(log n) rather than a full messages scan with ABS().

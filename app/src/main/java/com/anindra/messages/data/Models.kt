@@ -35,7 +35,8 @@ data class Message(
     val transport: String = "sms",
     val deliveredAt: Long = 0,
     /** Who sent it. Blank means the conversation's own address. */
-    val address: String = ""
+    val address: String = "",
+    val recipientSends: List<RecipientSend> = emptyList()
 ) {
     fun forRetry(chosenSim: Int?): Message = if (chosenSim == null) this else copy(subId = chosenSim)
 }

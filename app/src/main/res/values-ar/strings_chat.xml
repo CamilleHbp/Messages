@@ -106,4 +106,5 @@
     <string name="review_recipient">إلى %1$s</string>
     <string name="draft_one_photo">صورة واحدة</string>
     <string name="choose_retry_sim">اختيار شريحة SIM</string>
+    <string name="retry_failed">إعادة محاولة الإرسال الفاشل</string>
 </resources>
