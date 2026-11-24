@@ -38,4 +38,10 @@
     <string name="convo_blocked">번호를 차단했습니다</string>
     <string name="conversations_clear_search">검색어 지우기</string>
     <string name="conversations_no_matches">일치하는 대화가 없습니다</string>
+    <string name="recipient_no_match">“%s”와 일치하는 연락처가 없습니다</string>
+    <string name="inbox_empty_title">아직 대화가 없습니다</string>
+    <string name="archive_empty_title">보관된 대화가 없습니다</string>
+    <string name="archive_empty_hint">보관한 대화가 여기에 표시됩니다.</string>
+    <string name="inbox_unread_count">받은편지함의 읽지 않은 대화: %d개</string>
+    <string name="cancel_send_seconds">%1$s · %2$d초</string>
 </resources>

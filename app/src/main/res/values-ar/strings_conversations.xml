@@ -38,4 +38,10 @@
     <string name="convo_blocked">تم حظر الرقم</string>
     <string name="conversations_clear_search">محو البحث</string>
     <string name="conversations_no_matches">لا توجد محادثات مطابقة</string>
+    <string name="recipient_no_match">لا توجد جهات اتصال تطابق «%s»</string>
+    <string name="inbox_empty_title">لا توجد محادثات بعد</string>
+    <string name="archive_empty_title">لا توجد محادثات مؤرشفة</string>
+    <string name="archive_empty_hint">تظهر هنا المحادثات التي تؤرشفها.</string>
+    <string name="inbox_unread_count">عدد المحادثات غير المقروءة في صندوق الوارد: %d</string>
+    <string name="cancel_send_seconds">%1$s · %2$d ث</string>
 </resources>

@@ -177,3 +177,14 @@ private fun ExpressiveTabsPreview() {
         )
     }
 }
+
+@PreviewLightDark
+@Preview(showBackground = true)
+@Composable
+private fun EmptyInboxPreview() {
+    Stage {
+        Row { com.anindra.messages.ui.InboxActions(emptyList(), {}, {}) }
+        com.anindra.messages.ui.EmptyConversationList(false)
+        com.anindra.messages.ui.EmptyConversationList(true)
+    }
+}

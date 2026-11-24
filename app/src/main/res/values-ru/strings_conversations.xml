@@ -38,4 +38,10 @@
     <string name="convo_blocked">Номер заблокирован</string>
     <string name="conversations_clear_search">Очистить поиск</string>
     <string name="conversations_no_matches">Подходящих переписок нет</string>
+    <string name="recipient_no_match">Нет контактов по запросу «%s»</string>
+    <string name="inbox_empty_title">Пока нет переписок</string>
+    <string name="archive_empty_title">Нет архивных переписок</string>
+    <string name="archive_empty_hint">Здесь появятся переписки, которые вы архивируете.</string>
+    <string name="inbox_unread_count">Непрочитанных переписок во входящих: %d</string>
+    <string name="cancel_send_seconds">%1$s · %2$d с</string>
 </resources>

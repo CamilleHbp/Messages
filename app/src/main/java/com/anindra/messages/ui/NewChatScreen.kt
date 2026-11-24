@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AddComment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,12 +45,12 @@ data class Contact(val name: String, val number: String, val workProfile: Boolea
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onPick: (String, String) -> Unit) {
-    var query by remember { mutableStateOf("") }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    var query by rememberSaveable { mutableStateOf("") }
     androidx.activity.compose.BackHandler(onBack = onBack)
     val contacts by vm.contacts.collectAsState()
+    val recipient = query.trim()
     val filtered = contacts.filter {
-        it.name.contains(query, ignoreCase = true) || it.number.contains(query)
+        it.name.contains(recipient, ignoreCase = true) || it.number.contains(recipient)
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -78,38 +77,32 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
             )
             Spacer(Modifier.height(SettingsLayout.ROW_GAP))
 
-            // Manual entry option
-            val canSendToQuery = isPhoneNumber(query.trim())
-            GroupedRowCard(
-                position = RowPosition.SINGLE,
-                modifier = Modifier.padding(horizontal = SettingsLayout.SCREEN_PADDING)
-            ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = canSendToQuery) {
-                        onPick(query.trim(), query.trim())
-                    }
-                    .padding(SettingsLayout.ROW_CONTENT_PADDING)
-            ) {
-                PersonAvatar("#", size = 40.dp)
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(context.getString(R.string.new_chat_send_to, query.ifBlank { "number" }),
-                        fontWeight = FontWeight.Medium,
-                        color = if (query.isNotBlank() && !canSendToQuery)
-                            MaterialTheme.colorScheme.error else Color.Unspecified)
-                    if (query.isNotBlank() && !canSendToQuery) {
-                        Text(stringResource(R.string.new_chat_only_phone),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error)
+            if (isPhoneNumber(recipient)) {
+                GroupedRowCard(
+                    position = RowPosition.SINGLE,
+                    modifier = Modifier.padding(horizontal = SettingsLayout.SCREEN_PADDING)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { onPick(recipient, recipient) }
+                            .padding(SettingsLayout.ROW_CONTENT_PADDING)
+                    ) {
+                        PersonAvatar(recipient, size = 40.dp)
+                        Spacer(Modifier.width(16.dp))
+                        Text(stringResource(R.string.new_chat_send_to, recipient),
+                            fontWeight = FontWeight.Medium)
                     }
                 }
+                Spacer(Modifier.height(SettingsLayout.GROUP_GAP))
+            } else if (recipient.isNotEmpty() && filtered.isEmpty()) {
+                Text(
+                    stringResource(R.string.recipient_no_match, recipient),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = SettingsLayout.SCREEN_PADDING)
+                )
             }
-            }
-
-            Spacer(Modifier.height(SettingsLayout.GROUP_GAP))
 
             LazyColumn {
                 items(filtered, key = { it.number }) { contact ->

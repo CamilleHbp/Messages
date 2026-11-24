@@ -38,4 +38,10 @@
     <string name="convo_blocked">नंबर अवरुद्ध किया गया</string>
     <string name="conversations_clear_search">खोज मिटाएँ</string>
     <string name="conversations_no_matches">कोई मेल खाती बातचीत नहीं मिली</string>
+    <string name="recipient_no_match">“%s” से मेल खाने वाला कोई संपर्क नहीं मिला</string>
+    <string name="inbox_empty_title">अभी कोई बातचीत नहीं है</string>
+    <string name="archive_empty_title">कोई संग्रहित बातचीत नहीं है</string>
+    <string name="archive_empty_hint">आप जिन बातचीत को संग्रहित करते हैं, वे यहाँ दिखती हैं।</string>
+    <string name="inbox_unread_count">इनबॉक्स में अपठित बातचीत की संख्या: %d</string>
+    <string name="cancel_send_seconds">%1$s · %2$d से</string>
 </resources>

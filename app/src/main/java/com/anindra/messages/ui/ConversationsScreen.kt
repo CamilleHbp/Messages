@@ -424,13 +424,7 @@ fun ConversationsScreen(
                         IconButton(onClick = { searching = true }) {
                             Icon(Icons.Outlined.Search, stringResource(R.string.icon_search))
                         }
-                        IconButton(onClick = onOpenSettings) {
-                            PersonAvatar(
-                                stringResource(R.string.conversations_me), size = 32.dp,
-                                backgroundColor = MaterialTheme.colorScheme.primary,
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                        InboxActions(conversations, onOpenSettings, vm::markInboxRead)
                     }
                 }
             }
@@ -508,6 +502,10 @@ fun ConversationsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
+                }
+            } else if (searchQuery.isEmpty() && displayed.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    EmptyConversationList(showArchived)
                 }
             } else {
                 CompositionLocalProvider(
