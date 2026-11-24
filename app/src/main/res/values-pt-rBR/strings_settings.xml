@@ -160,4 +160,5 @@
     <string name="settings_scheduled_manage_title">Gerenciar mensagens agendadas</string>
     <string name="settings_search_hint">Buscar nas configurações</string>
     <string name="settings_search_none">Nenhuma configuração corresponde</string>
+    <string name="recipient_contacts_access">Permitir acesso aos contatos para pesquisar por nome</string>
 </resources>

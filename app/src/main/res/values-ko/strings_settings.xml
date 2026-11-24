@@ -160,4 +160,5 @@
     <string name="settings_scheduled_manage_title">예약 메시지 관리</string>
     <string name="settings_search_hint">설정 검색</string>
     <string name="settings_search_none">일치하는 설정 없음</string>
+    <string name="recipient_contacts_access">이름으로 검색하려면 연락처 접근을 허용하세요</string>
 </resources>

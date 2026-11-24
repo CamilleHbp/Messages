@@ -14,6 +14,13 @@ object ConversationList {
         if (value.all { it.code < 128 }) value
         else Normalizer.normalize(value, Normalizer.Form.NFD).replace(latinAccents, "")
 
+    fun matchesRecipient(name: String, address: String, query: String): Boolean = when {
+        query.isBlank() || AddressIdentity.tooShortToBeNumber(query) -> true
+        AddressIdentity.isNumberQuery(query) -> AddressIdentity.matchesNumber(address, query)
+        else -> searchableName(name).contains(searchableName(query), ignoreCase = true) ||
+            address.contains(query, ignoreCase = true)
+    }
+
     private fun matchesContact(conversation: Conversation, query: String, foldedQuery: String): Boolean =
         conversation.address.contains(query, ignoreCase = true) ||
             searchableName(conversation.name).contains(foldedQuery, ignoreCase = true) ||

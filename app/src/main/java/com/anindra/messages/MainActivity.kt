@@ -1,6 +1,7 @@
 package com.anindra.messages
 
 import android.app.Activity
+import kotlinx.coroutines.ensureActive
 import android.app.Application
 import android.Manifest
 import android.content.Intent
@@ -142,9 +143,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val pendingCrashReports =
         androidx.compose.runtime.mutableStateOf<List<java.io.File>>(emptyList())
 
-    init {
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val ctx = app.applicationContext
+    private var contactsLoad: kotlinx.coroutines.Job? = null
+
+    fun reloadContacts() {
+        contactsLoad?.cancel()
+        contactsLoad = scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val ctx = getApplication<Application>().applicationContext
             val out = mutableListOf<com.anindra.messages.ui.Contact>()
             val enterpriseBase = android.provider.ContactsContract.Directory.ENTERPRISE_DEFAULT
             // Shared across both sources: the same number can be saved in the
@@ -194,8 +198,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (_: Throwable) {
             }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             contacts.value = out
         }
+    }
+
+    init {
+        reloadContacts()
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             pendingCrashReports.value =
                 com.anindra.messages.crash.CrashReporter.pending(app.applicationContext)

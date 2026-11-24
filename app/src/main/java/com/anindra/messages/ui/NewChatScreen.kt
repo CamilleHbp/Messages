@@ -1,5 +1,16 @@
 package com.anindra.messages.ui
 
+import android.content.pm.PackageManager
+import android.content.Intent
+import android.provider.Settings
+import android.net.Uri
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.TextButton
+import com.anindra.messages.data.ConversationList
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,8 +60,25 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
     androidx.activity.compose.BackHandler(onBack = onBack)
     val contacts by vm.contacts.collectAsState()
     val recipient = query.trim()
-    val filtered = contacts.filter {
-        it.name.contains(recipient, ignoreCase = true) || it.number.contains(recipient)
+    val context = LocalContext.current
+    val permission = android.Manifest.permission.READ_CONTACTS
+    fun hasContactsAccess() = context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    var allowed by remember { mutableStateOf(hasContactsAccess()) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                allowed = hasContactsAccess()
+                if (allowed) vm.reloadContacts()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val filtered = remember(allowed, contacts, recipient) {
+        if (!allowed) emptyList() else contacts.filter {
+            ConversationList.matchesRecipient(it.name, it.number, recipient)
+        }
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -95,7 +123,13 @@ fun NewChatScreen(vm: com.anindra.messages.AppViewModel, onBack: () -> Unit, onP
                     }
                 }
                 Spacer(Modifier.height(SettingsLayout.GROUP_GAP))
-            } else if (recipient.isNotEmpty() && filtered.isEmpty()) {
+            }
+            if (!allowed) {
+                TextButton(onClick = {
+                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null)))
+                }) { Text(stringResource(R.string.recipient_contacts_access)) }
+            } else if (!isPhoneNumber(recipient) && recipient.isNotEmpty() && filtered.isEmpty()) {
                 Text(
                     stringResource(R.string.recipient_no_match, recipient),
                     style = MaterialTheme.typography.bodyMedium,
