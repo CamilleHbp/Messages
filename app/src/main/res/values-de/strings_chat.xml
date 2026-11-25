@@ -98,4 +98,6 @@
     <string name="chat_scheduled_more">+%d weitere</string>
     <string name="chat_send_now">Jetzt senden</string>
     <string name="chat_cancel_scheduled">Geplante Nachricht abbrechen</string>
+    <string name="chat_confirm_cancel_schedule">Diese geplante Nachricht stornieren?</string>
+    <string name="chat_keep_scheduled">Geplant lassen</string>
 </resources>

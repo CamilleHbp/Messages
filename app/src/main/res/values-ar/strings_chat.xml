@@ -98,4 +98,6 @@
     <string name="chat_scheduled_more">+%d أخرى</string>
     <string name="chat_send_now">إرسال الآن</string>
     <string name="chat_cancel_scheduled">إلغاء الرسالة المجدولة</string>
+    <string name="chat_confirm_cancel_schedule">هل تريد إلغاء هذه الرسالة المجدولة؟</string>
+    <string name="chat_keep_scheduled">إبقاء الرسالة مجدولة</string>
 </resources>

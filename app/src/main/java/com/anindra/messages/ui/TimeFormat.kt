@@ -4,6 +4,7 @@ import android.content.Context
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 fun is24HourFormat(context: Context): Boolean =
@@ -35,3 +36,9 @@ fun formatDateTime(
     locale: Locale = Locale.getDefault()
 ): String = dateTimeFormatter(datePrefix, is24Hour, locale)
     .format(Instant.ofEpochMilli(ts).atZone(ZoneId.systemDefault()))
+
+internal fun formatScheduledTime(timestamp: Long, is24Hour: Boolean, locale: Locale, zone: ZoneId = ZoneId.systemDefault()): String {
+    val local = Instant.ofEpochMilli(timestamp).atZone(zone)
+    val date = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(local)
+    return "$date • ${timeOnlyFormatter(is24Hour, locale).format(local)}"
+}

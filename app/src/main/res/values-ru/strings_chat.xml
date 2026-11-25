@@ -98,4 +98,6 @@
     <string name="chat_scheduled_more">Ещё %d</string>
     <string name="chat_send_now">Отправить сейчас</string>
     <string name="chat_cancel_scheduled">Отменить запланированное сообщение</string>
+    <string name="chat_confirm_cancel_schedule">Отменить отправку этого сообщения?</string>
+    <string name="chat_keep_scheduled">Оставить в расписании</string>
 </resources>

@@ -98,4 +98,6 @@
     <string name="chat_scheduled_more">+%d개 더</string>
     <string name="chat_send_now">지금 보내기</string>
     <string name="chat_cancel_scheduled">예약 메시지 취소</string>
+    <string name="chat_confirm_cancel_schedule">이 메시지의 예약 전송을 취소할까요?</string>
+    <string name="chat_keep_scheduled">예약 유지</string>
 </resources>

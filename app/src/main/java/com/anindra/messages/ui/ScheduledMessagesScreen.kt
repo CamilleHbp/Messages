@@ -1,6 +1,8 @@
 package com.anindra.messages.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +62,8 @@ import com.anindra.messages.AppViewModel
 import com.anindra.messages.R
 import com.anindra.messages.data.ScheduledMessage
 import com.anindra.messages.data.ScheduledTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -288,24 +293,20 @@ internal fun ReschedulePicker(timestamp: Long, onDone: (Long) -> Unit, onDismiss
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
     val current = Instant.ofEpochMilli(timestamp).atZone(zone)
-    var step by remember { mutableStateOf("date") }
-    var pickedDate by remember { mutableStateOf<java.time.LocalDate?>(null) }
-
-    if (step == "date") {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = current.toLocalDate()
-                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        )
+    var choosingTime by rememberSaveable { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = current.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+    val timePickerState = rememberTimePickerState(
+        initialHour = current.hour,
+        initialMinute = current.minute,
+        is24Hour = is24HourFormat(context)
+    )
+    if (!choosingTime) {
         DatePickerDialog(
             onDismissRequest = onDismiss,
             confirmButton = {
-                TextButton(onClick = {
-                    pickedDate = ScheduledTime.selectedDate(
-                        datePickerState.selectedDateMillis ?: current.toLocalDate()
-                            .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-                    )
-                    step = "time"
-                }) { Text(stringResource(R.string.chat_schedule)) }
+                TextButton(enabled = datePickerState.selectedDateMillis != null, onClick = { choosingTime = true }) {
+                    Text(stringResource(R.string.chat_next))
+                }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
@@ -314,18 +315,23 @@ internal fun ReschedulePicker(timestamp: Long, onDone: (Long) -> Unit, onDismiss
             DatePicker(state = datePickerState)
         }
     } else {
-        val timePickerState = rememberTimePickerState(
-            initialHour = current.hour,
-            initialMinute = current.minute,
-            is24Hour = is24HourFormat(context)
-        )
+        val pickedDay = checkNotNull(datePickerState.selectedDateMillis)
+        val calendarDate = ScheduledTime.selectedDate(pickedDay)
+        val dateLabel = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+            .withLocale(context.resources.configuration.locales[0]).format(calendarDate)
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { choosingTime = false },
             title = { Text(stringResource(R.string.chat_select_time)) },
-            text = { TimePicker(state = timePickerState) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(dateLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    TimePicker(state = timePickerState)
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    val day = pickedDate ?: current.toLocalDate()
+                    val day = calendarDate
                     onDone(
                         day.atTime(timePickerState.hour, timePickerState.minute)
                             .atZone(zone).toInstant().toEpochMilli()
@@ -333,7 +339,7 @@ internal fun ReschedulePicker(timestamp: Long, onDone: (Long) -> Unit, onDismiss
                 }) { Text(stringResource(R.string.chat_schedule)) }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
+                TextButton(onClick = { choosingTime = false }) { Text(stringResource(R.string.icon_back)) }
             }
         )
     }
