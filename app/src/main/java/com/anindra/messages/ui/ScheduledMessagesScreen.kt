@@ -1,6 +1,8 @@
 package com.anindra.messages.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +62,8 @@ import com.anindra.messages.AppViewModel
 import com.anindra.messages.R
 import com.anindra.messages.data.ScheduledMessage
 import com.anindra.messages.data.ScheduledTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.Instant
 import java.time.ZoneId
 
@@ -288,7 +293,6 @@ internal fun ScheduledRow(
 @Composable
 internal fun ReschedulePicker(
     timestamp: Long,
-    dateButton: Int = R.string.chat_schedule,
     saving: Boolean = false,
     onDone: (Long) -> Unit,
     onDismiss: () -> Unit
@@ -296,39 +300,45 @@ internal fun ReschedulePicker(
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
     val current = Instant.ofEpochMilli(timestamp).atZone(zone)
-    var pickedDay by remember { mutableStateOf<Long?>(null) }
-    if (pickedDay == null) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = ScheduledTime.pickerDate(timestamp, zone))
+    var choosingTime by rememberSaveable { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = ScheduledTime.pickerDate(timestamp, zone))
+    val timePickerState = rememberTimePickerState(
+        initialHour = current.hour,
+        initialMinute = current.minute,
+        is24Hour = is24HourFormat(context)
+    )
+    if (!choosingTime) {
         DatePickerDialog(
             onDismissRequest = onDismiss,
             confirmButton = {
                 val selected = datePickerState.selectedDateMillis
                 TextButton(
                     enabled = selected != null && selected >= ScheduledTime.pickerDate(System.currentTimeMillis(), zone),
-                    onClick = { pickedDay = selected }
-                ) { Text(stringResource(dateButton)) }
+                    onClick = { choosingTime = true }
+                ) { Text(stringResource(R.string.chat_next)) }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_cancel)) }
             }
         ) { DatePicker(state = datePickerState) }
     } else {
-        val timePickerState = rememberTimePickerState(
-            initialHour = current.hour,
-            initialMinute = current.minute,
-            is24Hour = is24HourFormat(context)
-        )
-        val selected = ScheduledTime.atTime(checkNotNull(pickedDay), timePickerState.hour, timePickerState.minute, zone)
+        val pickedDay = checkNotNull(datePickerState.selectedDateMillis)
+        val calendarDate = ScheduledTime.selectedDate(pickedDay)
+        val dateLabel = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+            .withLocale(context.resources.configuration.locales[0]).format(calendarDate)
+        val selected = ScheduledTime.atTime(pickedDay, timePickerState.hour, timePickerState.minute, zone)
         var expired by remember(selected) { mutableStateOf(selected <= System.currentTimeMillis()) }
         LaunchedEffect(selected) {
             kotlinx.coroutines.delay((selected - System.currentTimeMillis()).coerceAtLeast(0L))
             expired = true
         }
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { choosingTime = false },
             title = { Text(stringResource(R.string.chat_select_time)) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(dateLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
                     TimePicker(state = timePickerState)
                     if (expired) {
                         Text(stringResource(R.string.chat_schedule_future), color = MaterialTheme.colorScheme.error)
@@ -344,7 +354,7 @@ internal fun ReschedulePicker(
                 ) { Text(stringResource(R.string.chat_schedule)) }
             },
             dismissButton = {
-                TextButton(onClick = { pickedDay = null }) { Text(stringResource(R.string.icon_back)) }
+                TextButton(onClick = { choosingTime = false }) { Text(stringResource(R.string.icon_back)) }
             }
         )
     }

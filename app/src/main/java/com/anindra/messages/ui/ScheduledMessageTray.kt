@@ -1,5 +1,6 @@
 package com.anindra.messages.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anindra.messages.R
@@ -39,27 +41,38 @@ internal fun ScheduledMessageTray(messages: List<ScheduledMessage>, onManage: (S
 }
 
 @Composable
+private fun scheduledForLabel(message: ScheduledMessage): String {
+    val context = LocalContext.current
+    val timestamp = formatScheduledTime(message.timestamp, is24HourFormat(context), context.resources.configuration.locales[0])
+    return stringResource(R.string.chat_scheduled_for, timestamp)
+}
+
+@Composable
 internal fun ScheduledTrayRow(
     message: ScheduledMessage,
     onManage: () -> Unit,
     overflowCount: Int = 0,
     onShowAll: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
+    val manageLabel = stringResource(R.string.settings_scheduled_manage_title)
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(message.body, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    stringResource(R.string.chat_scheduled_for, formatDateTime(message.timestamp, "MMM d,", is24HourFormat(context))),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onManage, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Rounded.Schedule, stringResource(R.string.settings_scheduled_manage_title))
+        Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f).heightIn(min = 56.dp)
+                    .clickable(role = Role.Button, onClickLabel = manageLabel, onClick = onManage)
+                    .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(message.body, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        scheduledForLabel(message),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Rounded.Schedule, contentDescription = null)
             }
             if (overflowCount > 0 && onShowAll != null) {
                 Spacer(Modifier.width(8.dp))
@@ -86,19 +99,38 @@ internal fun ScheduledTraySheet(messages: List<ScheduledMessage>, onManage: (Sch
 
 @Composable
 internal fun ScheduledMessageActions(message: ScheduledMessage, onReschedule: () -> Unit, onSendNow: () -> Unit, onCancel: () -> Unit, onDismiss: () -> Unit) {
+    var confirmingCancel by remember(message.id) { mutableStateOf(false) }
+    val dismiss = { if (confirmingCancel) confirmingCancel = false else onDismiss() }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismiss,
         icon = { Icon(Icons.Rounded.Schedule, null) },
-        title = { Text(stringResource(R.string.settings_scheduled_title)) },
+        title = { Text(stringResource(if (confirmingCancel) R.string.chat_confirm_cancel_schedule else R.string.settings_scheduled_title)) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(scheduledForLabel(message), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
                 Text(message.body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.heightIn(max = 160.dp).verticalScroll(rememberScrollState()))
-                Spacer(Modifier.height(16.dp))
-                TextButton(onClick = onReschedule, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_scheduled_reschedule)) }
-                TextButton(onClick = onSendNow, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.chat_send_now)) }
-                TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.chat_cancel_scheduled), color = MaterialTheme.colorScheme.error) }
+                if (!confirmingCancel) {
+                    Spacer(Modifier.height(16.dp))
+                    TextButton(onClick = onReschedule, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_scheduled_reschedule)) }
+                    TextButton(onClick = onSendNow, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.chat_send_now)) }
+                    TextButton(onClick = { confirmingCancel = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.chat_cancel_scheduled), color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_close)) } }
+        confirmButton = {
+            if (confirmingCancel) {
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.chat_cancel_scheduled), color = MaterialTheme.colorScheme.error) }
+            } else {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_close)) }
+            }
+        },
+        dismissButton = {
+            if (confirmingCancel) {
+                TextButton(onClick = { confirmingCancel = false }) { Text(stringResource(R.string.chat_keep_scheduled)) }
+            }
+        }
     )
 }

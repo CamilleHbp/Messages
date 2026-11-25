@@ -99,6 +99,8 @@
     <string name="chat_scheduled_more">+%d और</string>
     <string name="chat_send_now">अभी भेजें</string>
     <string name="chat_cancel_scheduled">निर्धारित संदेश रद्द करें</string>
+    <string name="chat_confirm_cancel_schedule">इस शेड्यूल किए गए मैसेज को रद्द करें?</string>
+    <string name="chat_keep_scheduled">शेड्यूल बनाए रखें</string>
     <string name="photo_position">%2$d में से फ़ोटो %1$d</string>
     <string name="remove_photo_position">%2$d में से फ़ोटो %1$d हटाएँ</string>
     <string name="draft_photo_count">%d फ़ोटो</string>

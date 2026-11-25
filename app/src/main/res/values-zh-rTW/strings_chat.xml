@@ -95,6 +95,8 @@
     <string name="chat_scheduled_more">還有 %d 則</string>
     <string name="chat_send_now">立即傳送</string>
     <string name="chat_cancel_scheduled">取消排程訊息</string>
+    <string name="chat_confirm_cancel_schedule">取消預約傳送這則訊息？</string>
+    <string name="chat_keep_scheduled">保留預約傳送</string>
     <string name="photo_position">第 %1$d 張相片，共 %2$d 張</string>
     <string name="remove_photo_position">移除第 %1$d 張相片，共 %2$d 張</string>
     <string name="draft_photo_count">%d 張相片</string>

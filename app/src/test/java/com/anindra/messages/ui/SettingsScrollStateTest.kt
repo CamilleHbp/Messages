@@ -123,7 +123,7 @@ class SettingsScrollStateTest {
             }
             i++
         } while (depth > 0 && i < src.length)
-        return src.substring(i)
+        return src.substring(i).substringBefore("\n}")
     }
 
     @Test
@@ -133,6 +133,16 @@ class SettingsScrollStateTest {
         val routeScreens = Regex("\"[a-z]+\"\\s*->\\s*([A-Z][A-Za-z]*)\\(")
             .findAll(mainActivity).map { it.groupValues[1] }.toSet()
         assertFalse(routeScreens.any { it.endsWith("Dialog") })
+        val sample = """
+            fun ExampleScreen() {
+                RenderList()
+            }
+            fun ExampleDialog() {
+                Column(Modifier.verticalScroll(rememberScrollState()))
+            }
+        """.trimIndent()
+        assertTrue("RenderList()" in composableBody(sample, "ExampleScreen"))
+        assertFalse("rememberScrollState()" in composableBody(sample, "ExampleScreen"))
     }
 
     @Test

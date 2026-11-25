@@ -1916,7 +1916,6 @@ fun ChatScreen(
     if (showSchedulePicker) {
         ReschedulePicker(
             timestamp = remember { System.currentTimeMillis() + 5 * 60_000L },
-            dateButton = R.string.chat_next,
             saving = savingSchedule,
             onDone = { ts ->
                 val text = draft.trim()

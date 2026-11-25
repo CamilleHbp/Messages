@@ -95,6 +95,8 @@
     <string name="chat_scheduled_more">+%d autres</string>
     <string name="chat_send_now">Envoyer maintenant</string>
     <string name="chat_cancel_scheduled">Annuler le message programmé</string>
+    <string name="chat_confirm_cancel_schedule">Annuler cet envoi programmé ?</string>
+    <string name="chat_keep_scheduled">Garder l’envoi programmé</string>
     <string name="photo_position">Photo %1$d sur %2$d</string>
     <string name="remove_photo_position">Retirer la photo %1$d sur %2$d</string>
     <string name="draft_photo_count">%d photos</string>

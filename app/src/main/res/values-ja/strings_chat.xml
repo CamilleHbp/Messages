@@ -99,6 +99,8 @@
     <string name="chat_scheduled_more">他 %d 件</string>
     <string name="chat_send_now">今すぐ送信</string>
     <string name="chat_cancel_scheduled">送信予約を取り消す</string>
+    <string name="chat_confirm_cancel_schedule">このメッセージの送信予約を取り消しますか？</string>
+    <string name="chat_keep_scheduled">予約を維持</string>
     <string name="photo_position">%2$d 枚中 %1$d 枚目の写真</string>
     <string name="remove_photo_position">%2$d 枚中 %1$d 枚目の写真を削除</string>
     <string name="draft_photo_count">写真 %d 枚</string>
