@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">Cancel scheduled message</string>
     <string name="chat_confirm_cancel_schedule">Cancel this scheduled message?</string>
     <string name="chat_keep_scheduled">Keep scheduled</string>
+    <string name="schedule_gone">This message is no longer scheduled. Check the conversation for its status.</string>
+    <string name="schedule_try_again">Could not start sending. Try Send now again or change the send time.</string>
+    <string name="schedule_blocked">This number is blocked. Unblock it before sending.</string>
+    <string name="sms_radio_recovery">Mobile radio off. Check airplane mode before retrying.</string>
+    <string name="sms_service_recovery">Mobile service unavailable. Retry when you have a signal.</string>
+    <string name="sms_unknown_recovery">Not sent. Check the number and your mobile service, then retry.</string>
 </resources>

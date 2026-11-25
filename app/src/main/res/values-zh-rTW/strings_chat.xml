@@ -96,4 +96,10 @@
     <string name="chat_cancel_scheduled">取消排程訊息</string>
     <string name="chat_confirm_cancel_schedule">取消預約傳送這則訊息？</string>
     <string name="chat_keep_scheduled">保留預約傳送</string>
+    <string name="schedule_gone">這則訊息已不在預約傳送清單中。請到對話中查看狀態。</string>
+    <string name="schedule_try_again">無法開始傳送。請再次點選立即傳送，或更改傳送時間。</string>
+    <string name="schedule_blocked">這個號碼已遭封鎖。請先解除封鎖再傳送。</string>
+    <string name="sms_radio_recovery">行動通訊已關閉。請確認飛航模式後再試一次。</string>
+    <string name="sms_service_recovery">行動網路無法使用。請在有訊號時再試一次。</string>
+    <string name="sms_unknown_recovery">未傳送。請確認號碼與行動網路後再試一次。</string>
 </resources>

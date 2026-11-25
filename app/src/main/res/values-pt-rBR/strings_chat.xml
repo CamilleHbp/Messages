@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">Cancelar mensagem agendada</string>
     <string name="chat_confirm_cancel_schedule">Cancelar esta mensagem agendada?</string>
     <string name="chat_keep_scheduled">Manter agendamento</string>
+    <string name="schedule_gone">Esta mensagem não está mais agendada. Confira o status na conversa.</string>
+    <string name="schedule_try_again">Não foi possível iniciar o envio. Tente Enviar agora novamente ou altere o horário.</string>
+    <string name="schedule_blocked">Este número está bloqueado. Desbloqueie-o antes de enviar.</string>
+    <string name="sms_radio_recovery">A rede móvel está desativada. Confira o modo avião antes de tentar novamente.</string>
+    <string name="sms_service_recovery">Sem serviço móvel. Tente novamente quando houver sinal.</string>
+    <string name="sms_unknown_recovery">Mensagem não enviada. Confira o número e o sinal da rede móvel e tente novamente.</string>
 </resources>

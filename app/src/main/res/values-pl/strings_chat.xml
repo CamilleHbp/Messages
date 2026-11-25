@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">Anuluj zaplanowaną wiadomość</string>
     <string name="chat_confirm_cancel_schedule">Anulować tę zaplanowaną wiadomość?</string>
     <string name="chat_keep_scheduled">Zachowaj termin</string>
+    <string name="schedule_gone">Ta wiadomość nie jest już zaplanowana. Sprawdź jej stan w rozmowie.</string>
+    <string name="schedule_try_again">Nie udało się rozpocząć wysyłania. Ponownie wybierz Wyślij teraz lub zmień godzinę wysyłki.</string>
+    <string name="schedule_blocked">Ten numer jest zablokowany. Odblokuj go przed wysłaniem.</string>
+    <string name="sms_radio_recovery">Łączność komórkowa jest wyłączona. Sprawdź tryb samolotowy i spróbuj ponownie.</string>
+    <string name="sms_service_recovery">Brak sieci komórkowej. Spróbuj ponownie, gdy odzyskasz zasięg.</string>
+    <string name="sms_unknown_recovery">Nie wysłano. Sprawdź numer i zasięg sieci komórkowej, a następnie spróbuj ponownie.</string>
 </resources>

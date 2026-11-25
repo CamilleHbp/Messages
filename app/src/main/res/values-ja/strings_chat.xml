@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">送信予約を取り消す</string>
     <string name="chat_confirm_cancel_schedule">このメッセージの送信予約を取り消しますか？</string>
     <string name="chat_keep_scheduled">予約を維持</string>
+    <string name="schedule_gone">このメッセージの送信予約はありません。送信状況は会話で確認してください。</string>
+    <string name="schedule_try_again">送信を開始できませんでした。「今すぐ送信」を押すか、予約時刻を変更してください。</string>
+    <string name="schedule_blocked">この番号はブロックされています。送信する前にブロックを解除してください。</string>
+    <string name="sms_radio_recovery">携帯電話の無線通信がオフです。機内モードを確認してから再試行してください。</string>
+    <string name="sms_service_recovery">携帯電話の電波が届いていません。電波が届く場所で再試行してください。</string>
+    <string name="sms_unknown_recovery">送信できませんでした。電話番号と電波の状態を確認して再試行してください。</string>
 </resources>

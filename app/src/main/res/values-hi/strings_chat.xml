@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">निर्धारित संदेश रद्द करें</string>
     <string name="chat_confirm_cancel_schedule">इस शेड्यूल किए गए मैसेज को रद्द करें?</string>
     <string name="chat_keep_scheduled">शेड्यूल बनाए रखें</string>
+    <string name="schedule_gone">यह मैसेज अब शेड्यूल नहीं है। इसकी स्थिति बातचीत में देखें।</string>
+    <string name="schedule_try_again">मैसेज भेजना शुरू नहीं हो सका। अभी भेजने की फिर कोशिश करें या भेजने का समय बदलें।</string>
+    <string name="schedule_blocked">यह नंबर ब्लॉक है। भेजने से पहले इसे अनब्लॉक करें।</string>
+    <string name="sms_radio_recovery">मोबाइल रेडियो बंद है। फिर कोशिश करने से पहले हवाई जहाज़ मोड जाँचें।</string>
+    <string name="sms_service_recovery">मोबाइल सेवा उपलब्ध नहीं है। सिग्नल मिलने पर फिर कोशिश करें।</string>
+    <string name="sms_unknown_recovery">मैसेज नहीं भेजा गया। नंबर और मोबाइल नेटवर्क जाँचकर फिर कोशिश करें।</string>
 </resources>

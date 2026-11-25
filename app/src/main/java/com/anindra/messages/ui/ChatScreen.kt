@@ -459,26 +459,17 @@ internal fun ChatBubble(
             }
 
             if (msg.status == "failed" && msg.isMe) {
-                Row(
-                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
                 ) {
                     Text(
-                        stringResource(R.string.chat_status_not_sent),
+                        stringResource(smsFailureLabel(msg)),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
                         color = cs.error
                     )
-                    Text(
-                        " · ",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
-                        color = cs.error
-                    )
-                    Text(
-                        stringResource(R.string.chat_status_retry),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = ChatMetaWeight),
-                        color = cs.error,
-                        modifier = Modifier.clickable { onRetry() }
-                    )
+                    TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text(stringResource(R.string.chat_retry))
+                    }
                 }
             } else if (showTime) {
                 // Google shows the type only on your own messages.
@@ -1607,12 +1598,7 @@ fun ChatScreen(
         ScheduledMessageActions(
             message = message,
             onReschedule = { managedSchedule = null; editingSchedule = message },
-            onSendNow = {
-                managedSchedule = null
-                vm.sendScheduledMessageNow(message.id) { ok ->
-                    if (!ok) Toast.makeText(context, context.getString(R.string.message_status_failed), Toast.LENGTH_SHORT).show()
-                }
-            },
+            onSendNow = { complete -> vm.sendScheduledMessageNow(message.id, complete) },
             onCancel = { managedSchedule = null; vm.cancelScheduledMessage(message.id) },
             onDismiss = { managedSchedule = null }
         )
@@ -2638,26 +2624,17 @@ fun MessageRow(
         val simLabelFinal = simLabel
 
         if (msg.status == "failed" && msg.isMe) {
-            Row(
-                modifier = Modifier.padding(top = 2.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(top = 2.dp, end = 4.dp)
             ) {
                 Text(
-                    "Not sent",
+                    stringResource(smsFailureLabel(msg)),
                     style = MaterialTheme.typography.labelSmall,
                     color = cs.error
                 )
-                Text(
-                    " · ",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.error
-                )
-                Text(
-                    stringResource(R.string.chat_status_retry),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.error,
-                    modifier = Modifier.clickable { onRetry() }
-                )
+                TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.chat_retry))
+                }
             }
         } else {
             val statusText = if (msg.isMe) {

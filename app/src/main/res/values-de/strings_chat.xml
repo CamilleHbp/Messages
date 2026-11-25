@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">Geplante Nachricht abbrechen</string>
     <string name="chat_confirm_cancel_schedule">Diese geplante Nachricht stornieren?</string>
     <string name="chat_keep_scheduled">Geplant lassen</string>
+    <string name="schedule_gone">Diese Nachricht ist nicht mehr geplant. Prüfe ihren Status im Chat.</string>
+    <string name="schedule_try_again">Der Versand konnte nicht gestartet werden. Versuche es mit „Jetzt senden“ erneut oder ändere die Sendezeit.</string>
+    <string name="schedule_blocked">Diese Nummer ist blockiert. Gib sie vor dem Senden frei.</string>
+    <string name="sms_radio_recovery">Der Mobilfunk ist ausgeschaltet. Prüfe vor dem nächsten Versuch den Flugmodus.</string>
+    <string name="sms_service_recovery">Kein Mobilfunknetz. Versuche es erneut, sobald du Empfang hast.</string>
+    <string name="sms_unknown_recovery">Nicht gesendet. Prüfe die Nummer und den Mobilfunkempfang und versuche es erneut.</string>
 </resources>

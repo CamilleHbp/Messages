@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">예약 메시지 취소</string>
     <string name="chat_confirm_cancel_schedule">이 메시지의 예약 전송을 취소할까요?</string>
     <string name="chat_keep_scheduled">예약 유지</string>
+    <string name="schedule_gone">이 메시지의 전송 예약이 더 이상 없습니다. 대화에서 전송 상태를 확인하세요.</string>
+    <string name="schedule_try_again">전송을 시작할 수 없습니다. 지금 보내기를 다시 누르거나 예약 시간을 변경하세요.</string>
+    <string name="schedule_blocked">차단된 번호입니다. 전송하려면 차단을 해제하세요.</string>
+    <string name="sms_radio_recovery">이동통신 무선 기능이 꺼져 있습니다. 비행기 모드를 확인한 후 다시 시도하세요.</string>
+    <string name="sms_service_recovery">이동통신 서비스를 이용할 수 없습니다. 신호가 잡히면 다시 시도하세요.</string>
+    <string name="sms_unknown_recovery">전송하지 못했습니다. 번호와 이동통신 상태를 확인한 후 다시 시도하세요.</string>
 </resources>

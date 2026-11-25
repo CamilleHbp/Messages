@@ -96,4 +96,10 @@
     <string name="chat_cancel_scheduled">Annuler le message programmé</string>
     <string name="chat_confirm_cancel_schedule">Annuler cet envoi programmé ?</string>
     <string name="chat_keep_scheduled">Garder l’envoi programmé</string>
+    <string name="schedule_gone">Ce message ne figure plus parmi les envois programmés. Consultez son état dans la conversation.</string>
+    <string name="schedule_try_again">L’envoi n’a pas pu démarrer. Réessayez avec Envoyer maintenant ou changez l’heure prévue.</string>
+    <string name="schedule_blocked">Ce numéro est bloqué. Débloquez-le avant l’envoi.</string>
+    <string name="sms_radio_recovery">Le réseau mobile est désactivé. Vérifiez le mode avion avant de réessayer.</string>
+    <string name="sms_service_recovery">Réseau mobile indisponible. Réessayez quand vous aurez du réseau.</string>
+    <string name="sms_unknown_recovery">Message non envoyé. Vérifiez le numéro et votre connexion au réseau mobile, puis réessayez.</string>
 </resources>

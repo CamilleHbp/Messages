@@ -100,4 +100,10 @@
     <string name="chat_cancel_scheduled">Отменить запланированное сообщение</string>
     <string name="chat_confirm_cancel_schedule">Отменить отправку этого сообщения?</string>
     <string name="chat_keep_scheduled">Оставить в расписании</string>
+    <string name="schedule_gone">Это сообщение больше не запланировано. Посмотрите его статус в переписке.</string>
+    <string name="schedule_try_again">Не удалось начать отправку. Снова нажмите «Отправить сейчас» или измените время отправки.</string>
+    <string name="schedule_blocked">Этот номер заблокирован. Разблокируйте его перед отправкой.</string>
+    <string name="sms_radio_recovery">Мобильная связь отключена. Проверьте режим полёта и повторите попытку.</string>
+    <string name="sms_service_recovery">Нет мобильной сети. Повторите попытку, когда появится сигнал.</string>
+    <string name="sms_unknown_recovery">Не отправлено. Проверьте номер и сигнал сети, затем повторите попытку.</string>
 </resources>
