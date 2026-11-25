@@ -123,4 +123,10 @@
     <string name="group_no_service">No mobile service</string>
     <string name="group_radio_off">Mobile radio off</string>
     <string name="review_missing_remaining">Unavailable photos: %d</string>
+    <string name="schedule_gone">This message is no longer scheduled. Check the conversation for its status.</string>
+    <string name="schedule_try_again">Could not start sending. Try Send now again or change the send time.</string>
+    <string name="schedule_blocked">This number is blocked. Unblock it before sending.</string>
+    <string name="sms_radio_recovery">Mobile radio off. Check airplane mode before retrying.</string>
+    <string name="sms_service_recovery">Mobile service unavailable. Retry when you have a signal.</string>
+    <string name="sms_unknown_recovery">Not sent. Check the number and your mobile service, then retry.</string>
 </resources>

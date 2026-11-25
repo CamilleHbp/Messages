@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+enum class ScheduledSendResult { Submitted, FailedInChat, NoLongerScheduled, Blocked, CouldNotStart }
+
 class ScheduledMessageSender : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -64,12 +66,17 @@ class ScheduledMessageSender : BroadcastReceiver() {
             })
         }
 
-        suspend fun sendNow(context: Context, id: Long): Boolean = send(context, id)
+        suspend fun sendNow(context: Context, id: Long): ScheduledSendResult {
+            val repo = (context.applicationContext as MessagesApplication).repository
+            val message = repo.scheduledMessageById(id) ?: return ScheduledSendResult.NoLongerScheduled
+            if (repo.isAddressBlocked(message.address)) return ScheduledSendResult.Blocked
+            return send(context, id)
+        }
 
-        private suspend fun send(context: Context, id: Long, dueAt: Long? = null): Boolean =
+        private suspend fun send(context: Context, id: Long, dueAt: Long? = null): ScheduledSendResult =
             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                 val repo = (context.applicationContext as MessagesApplication).repository
-                val (scheduled, stored) = repo.claimScheduledMessage(id, dueAt) ?: return@withContext false
+                val (scheduled, stored) = repo.claimScheduledMessage(id, dueAt) ?: return@withContext ScheduledSendResult.NoLongerScheduled
                 val accepted = runCatching {
                     cancel(context, id)
                     if (repo.isAddressBlocked(scheduled.address)) return@runCatching false
@@ -92,7 +99,7 @@ class ScheduledMessageSender : BroadcastReceiver() {
                     repo.markMessageStatusSuspend(stored.id, "failed")
                     NotificationHelper.showSendFailed(context, scheduled.address)
                 }
-                accepted
+                if (accepted) ScheduledSendResult.Submitted else ScheduledSendResult.FailedInChat
             }
 
         fun cancel(context: Context, id: Long) {

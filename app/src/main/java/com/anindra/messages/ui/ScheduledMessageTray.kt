@@ -15,6 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.anindra.messages.sms.ScheduledSendResult
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -98,8 +102,19 @@ internal fun ScheduledTraySheet(messages: List<ScheduledMessage>, onManage: (Sch
 }
 
 @Composable
-internal fun ScheduledMessageActions(message: ScheduledMessage, onReschedule: () -> Unit, onSendNow: () -> Unit, onCancel: () -> Unit, onDismiss: () -> Unit) {
+internal fun ScheduledMessageActions(message: ScheduledMessage, onReschedule: () -> Unit, onSendNow: ((ScheduledSendResult) -> Unit) -> Unit, onCancel: () -> Unit, onDismiss: () -> Unit) {
     var confirmingCancel by remember(message.id) { mutableStateOf(false) }
+    var sending by remember(message.id) { mutableStateOf(false) }
+    var result by remember(message.id) { mutableStateOf<ScheduledSendResult?>(null) }
+    val guidance = when (result) {
+        ScheduledSendResult.NoLongerScheduled -> R.string.schedule_gone
+        ScheduledSendResult.CouldNotStart -> R.string.schedule_try_again
+        ScheduledSendResult.Blocked -> R.string.schedule_blocked
+        else -> null
+    }
+    LaunchedEffect(result) {
+        if (result == ScheduledSendResult.Submitted || result == ScheduledSendResult.FailedInChat) onDismiss()
+    }
     val dismiss = { if (confirmingCancel) confirmingCancel = false else onDismiss() }
     AlertDialog(
         onDismissRequest = dismiss,
@@ -110,11 +125,24 @@ internal fun ScheduledMessageActions(message: ScheduledMessage, onReschedule: ()
                 Text(scheduledForLabel(message), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
                 Text(message.body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.heightIn(max = 160.dp).verticalScroll(rememberScrollState()))
-                if (!confirmingCancel) {
+                if (guidance != null && !confirmingCancel) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(guidance), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                }
+                if (!confirmingCancel && result != ScheduledSendResult.NoLongerScheduled) {
                     Spacer(Modifier.height(16.dp))
-                    TextButton(onClick = onReschedule, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_scheduled_reschedule)) }
-                    TextButton(onClick = onSendNow, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.chat_send_now)) }
-                    TextButton(onClick = { confirmingCancel = true }, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(enabled = !sending, onClick = onReschedule, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_scheduled_reschedule)) }
+                    TextButton(enabled = !sending, onClick = {
+                        sending = true
+                        onSendNow {
+                            sending = false
+                            result = it
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(if (sending) R.string.status_sending else R.string.chat_send_now))
+                    }
+                    TextButton(enabled = !sending, onClick = { confirmingCancel = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.chat_cancel_scheduled), color = MaterialTheme.colorScheme.error)
                     }
                 }

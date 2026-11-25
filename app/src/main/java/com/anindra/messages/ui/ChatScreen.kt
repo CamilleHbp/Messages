@@ -245,10 +245,10 @@ internal fun TextCopyDialog(
 }
 
 @Composable
-internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?) {
+internal fun FailedSendActions(onRetry: () -> Unit, onChooseSim: (() -> Unit)?, statusLabel: Int = R.string.chat_status_not_sent) {
     androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center,
         itemVerticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.chat_status_not_sent), color = MaterialTheme.colorScheme.error,
+        Text(stringResource(statusLabel), color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelSmall)
         TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(stringResource(R.string.chat_retry))
@@ -546,7 +546,7 @@ internal fun ChatBubble(
             }
 
             if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
-                FailedSendActions(onRetry, onChooseSim)
+                FailedSendActions(onRetry, onChooseSim, smsFailureLabel(msg))
             } else if (showTime) {
                 // Google shows the type only on your own messages.
                 val statusText = if (msg.isMe) {
@@ -1642,12 +1642,7 @@ fun ChatScreen(
         ScheduledMessageActions(
             message = message,
             onReschedule = { managedSchedule = null; editingSchedule = message },
-            onSendNow = {
-                managedSchedule = null
-                vm.sendScheduledMessageNow(message.id) { ok ->
-                    if (!ok) Toast.makeText(context, context.getString(R.string.message_status_failed), Toast.LENGTH_SHORT).show()
-                }
-            },
+            onSendNow = { complete -> vm.sendScheduledMessageNow(message.id, complete) },
             onCancel = { managedSchedule = null; vm.cancelScheduledMessage(message.id) },
             onDismiss = { managedSchedule = null }
         )
@@ -2753,7 +2748,7 @@ fun MessageRow(
         val simLabelFinal = simLabel
 
         if (msg.recipientSends.isEmpty() && msg.status == "failed" && msg.isMe) {
-            FailedSendActions(onRetry, onChooseSim)
+            FailedSendActions(onRetry, onChooseSim, smsFailureLabel(msg))
         } else {
             val statusText = if (msg.isMe) {
                 when {

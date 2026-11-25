@@ -54,10 +54,13 @@ class SmsStatusReceiver : BroadcastReceiver() {
                             repo.writeSentToSystem(address, it.body, it.subId, messageId)
                         }
                     }
-                    resultCodeSnapshot != Activity.RESULT_OK -> fail(repo, context, messageId)
-                    action == ACTION_SMS_DELIVERED ->
-                        repo.markMessageStatusSuspend(messageId, "delivered")
-                    else -> sent(repo, messageId)
+                    action == ACTION_SMS_DELIVERED -> {
+                        if (resultCodeSnapshot == Activity.RESULT_OK) repo.markMessageStatusSuspend(messageId, "delivered")
+                    }
+                    action == ACTION_SMS_SENT -> {
+                        if (resultCodeSnapshot == Activity.RESULT_OK) sent(repo, messageId)
+                        else fail(repo, context, messageId, resultCodeSnapshot)
+                    }
                 }
             } finally {
                 wakeLock.safeRelease()
@@ -130,8 +133,8 @@ class SmsStatusReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun fail(repo: Repository, context: Context, messageId: Long) {
-        repo.markMessageStatusSuspend(messageId, "failed")
+    private suspend fun fail(repo: Repository, context: Context, messageId: Long, smsError: Int = 0) {
+        repo.markMessageStatusSuspend(messageId, "failed", smsError)
         val msg = repo.messageByIdSuspend(messageId) ?: return
         val convo = repo.conversationByIdSuspend(msg.conversationId) ?: return
         NotificationHelper.showSendFailed(context, convo.address)

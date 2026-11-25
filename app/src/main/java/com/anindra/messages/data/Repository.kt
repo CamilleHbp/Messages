@@ -60,7 +60,7 @@ private const val IMPORT_PROGRESS_EVERY = 250
 /** Tag for the MMS provider-import trace; see com.anindra.messages.sms.MmsTrace. */
 private const val TRACE = "MmsImport"
 
-private const val DB_VERSION = 30
+private const val DB_VERSION = 31
 private const val PREFS_NAME = "messages_schema"
 private const val PREF_HEAL_APPLIED = "heal_v1_applied"
 
@@ -148,6 +148,7 @@ class Db(context: Context) :
         db.execSQL("ALTER TABLE messages ADD COLUMN address TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE messages ADD COLUMN recipient_sends TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE messages ADD COLUMN sms_error INTEGER NOT NULL DEFAULT 0")
         createConversationRecipients(db)
         createMessageProviderIds(db)
     }
@@ -332,6 +333,7 @@ class Db(context: Context) :
         }
         if (oldVersion < 30) db.execSQL("ALTER TABLE messages ADD COLUMN recipient_sends TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 29) db.execSQL("ALTER TABLE conversations ADD COLUMN composer TEXT NOT NULL DEFAULT ''")
+        if (oldVersion < 31) db.execSQL("ALTER TABLE messages ADD COLUMN sms_error INTEGER NOT NULL DEFAULT 0")
         if (oldVersion < 28) {
             // A group name the user typed must survive, while the default name
             // should grow when a member is added. Track which is which; existing
@@ -655,7 +657,7 @@ class Repository(private val context: Context) {
         val out = mutableListOf<Message>()
         db.readableDatabase.rawQuery(
             """SELECT id,body,timestamp,is_me,status,media_type,media_uri,reactions,locked,sub_id,
-               transport,delivered_at,address,recipient_sends FROM messages
+               transport,delivered_at,address,recipient_sends,sms_error FROM messages
                WHERE conversation_id=? AND deleted_at=0 ORDER BY timestamp DESC LIMIT ? OFFSET ?""",
             arrayOf(conversationId.toString(), limit.toString(), offset.toString())
         ).use { c ->
@@ -676,7 +678,8 @@ class Repository(private val context: Context) {
                         transport = c.getString(10),
                         deliveredAt = c.getLong(11),
                         address = c.getString(12).orEmpty(),
-                        recipientSends = RecipientSend.decode(c.getString(13))
+                        recipientSends = RecipientSend.decode(c.getString(13)),
+                        smsError = c.getInt(14)
                     )
                 )
             }
@@ -1884,15 +1887,15 @@ class Repository(private val context: Context) {
         true
     }
 
-    fun markMessageStatusSuspend(messageId: Long, status: String) {
+    fun markMessageStatusSuspend(messageId: Long, status: String, smsError: Int = 0) {
         if (status == "delivered") {
             db.writableDatabase.execSQL(
-                "UPDATE messages SET status=?, delivered_at=? WHERE id=?",
+                "UPDATE messages SET status=?, delivered_at=?, sms_error=0 WHERE id=?",
                 arrayOf<Any?>(status, System.currentTimeMillis(), messageId)
             )
         } else {
             db.writableDatabase.execSQL(
-                "UPDATE messages SET status=? WHERE id=?", arrayOf<Any?>(status, messageId)
+                "UPDATE messages SET status=?, sms_error=? WHERE id=?", arrayOf<Any?>(status, smsError, messageId)
             )
         }
         notifyChanged()
@@ -3389,6 +3392,7 @@ class Repository(private val context: Context) {
     suspend fun claimFailedSend(id: Long, simId: Int): Boolean = runOnIoAsync {
         val changed = db.writableDatabase.update("messages", ContentValues().apply {
             put("status", "sending")
+            put("sms_error", 0)
             put("sub_id", simId)
         }, "id=? AND is_me=1 AND status='failed' AND deleted_at=0", arrayOf(id.toString())) == 1
         if (changed) notifyChanged()
@@ -3398,7 +3402,7 @@ class Repository(private val context: Context) {
     suspend fun messageByIdSuspend(messageId: Long): Message? = runOnIoAsync {
         var found: Message? = null
         db.readableDatabase.rawQuery(
-            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions,sub_id,recipient_sends
+            """SELECT conversation_id,body,timestamp,is_me,status,media_type,media_uri,reactions,sub_id,recipient_sends,sms_error
                FROM messages WHERE id=?""",
             arrayOf(messageId.toString())
         ).use { c ->
@@ -3413,7 +3417,8 @@ class Repository(private val context: Context) {
                 mediaUri = c.getString(6),
                 reactions = parseReactions(c.getString(7)),
                 subId = c.getInt(8),
-                recipientSends = RecipientSend.decode(c.getString(9))
+                recipientSends = RecipientSend.decode(c.getString(9)),
+                smsError = c.getInt(10)
             )
         }
         found

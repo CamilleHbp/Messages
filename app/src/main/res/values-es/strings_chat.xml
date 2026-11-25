@@ -123,4 +123,10 @@
     <string name="group_no_service">Sin servicio móvil</string>
     <string name="group_radio_off">Radio móvil desactivada</string>
     <string name="review_missing_remaining">Fotos no disponibles: %d</string>
+    <string name="schedule_gone">Este mensaje ya no está programado. Comprueba su estado en la conversación.</string>
+    <string name="schedule_try_again">No se pudo iniciar el envío. Vuelve a pulsar Enviar ahora o cambia la hora de envío.</string>
+    <string name="schedule_blocked">Este número está bloqueado. Desbloquéalo antes de enviar.</string>
+    <string name="sms_radio_recovery">La radio móvil está desactivada. Comprueba el modo avión antes de reintentarlo.</string>
+    <string name="sms_service_recovery">Sin servicio móvil. Vuelve a intentarlo cuando tengas cobertura.</string>
+    <string name="sms_unknown_recovery">No se ha enviado. Comprueba el número y la cobertura y vuelve a intentarlo.</string>
 </resources>

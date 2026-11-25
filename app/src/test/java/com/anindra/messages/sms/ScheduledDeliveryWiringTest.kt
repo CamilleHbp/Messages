@@ -29,13 +29,13 @@ class ScheduledDeliveryWiringTest {
         assertFalse(receive.contains("getStringExtra"))
         assertFalse(receive.contains("getIntExtra"))
         assertTrue(receive.contains("send(context, id, dueAt = System.currentTimeMillis())"))
-        assertTrue(dispatch.contains("repo.claimScheduledMessage(id, dueAt) ?: return@withContext false"))
+        assertTrue(dispatch.contains("repo.claimScheduledMessage(id, dueAt) ?: return@withContext ScheduledSendResult.NoLongerScheduled"))
     }
 
     @Test fun aRescheduledMessageCannotBeSentByItsOldAlarm() {
         assertTrue(claim.contains("row.timestamp > dueAt"))
         assertTrue(claim.contains("return@runOnIoAsync null"))
-        assertTrue(sender.contains("suspend fun sendNow(context: Context, id: Long): Boolean = send(context, id)"))
+        assertTrue(sender.substringAfter("suspend fun sendNow(").substringBefore("private suspend fun send(").contains("return send(context, id)"))
     }
 
     @Test fun claimingAndCreatingTheOutgoingMessageShareOneTransaction() {

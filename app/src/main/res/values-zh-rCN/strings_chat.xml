@@ -119,4 +119,10 @@
     <string name="group_no_service">无移动网络服务</string>
     <string name="group_radio_off">移动通信已关闭</string>
     <string name="review_missing_remaining">不可用的照片：%d 张</string>
+    <string name="schedule_gone">这条消息已不在定时发送列表中。请到对话中查看状态。</string>
+    <string name="schedule_try_again">无法开始发送。请再次点按立即发送，或更改发送时间。</string>
+    <string name="schedule_blocked">此号码已被屏蔽。请先取消屏蔽再发送。</string>
+    <string name="sms_radio_recovery">移动通信已关闭。请检查飞行模式后重试。</string>
+    <string name="sms_service_recovery">移动网络不可用。请在有信号时重试。</string>
+    <string name="sms_unknown_recovery">未发送。请检查号码和移动网络后重试。</string>
 </resources>

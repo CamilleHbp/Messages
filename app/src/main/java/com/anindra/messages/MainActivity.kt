@@ -1,5 +1,6 @@
 package com.anindra.messages
 
+import com.anindra.messages.sms.ScheduledSendResult
 import android.app.Activity
 import com.anindra.messages.data.ComposerRecord
 import com.anindra.messages.data.ComposerState
@@ -1003,12 +1004,12 @@ when (val plan = ForwardPlan.of(msg, text)) {
         }
     }
 
-    fun sendScheduledMessageNow(id: Long, onResult: (Boolean) -> Unit = {}) {
+    fun sendScheduledMessageNow(id: Long, onResult: (ScheduledSendResult) -> Unit) {
         scope.launch(Dispatchers.IO) {
-            val ok = runCatching {
+            val result = runCatching {
                 com.anindra.messages.sms.ScheduledMessageSender.sendNow(getApplication(), id)
-            }.getOrDefault(false)
-            withContext(Dispatchers.Main) { onResult(ok) }
+            }.getOrDefault(ScheduledSendResult.CouldNotStart)
+            withContext(Dispatchers.Main) { onResult(result) }
         }
     }
 

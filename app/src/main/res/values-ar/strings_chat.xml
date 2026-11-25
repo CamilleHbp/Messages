@@ -123,4 +123,10 @@
     <string name="group_no_service">لا توجد خدمة خلوية</string>
     <string name="group_radio_off">الاتصال الخلوي متوقف</string>
     <string name="review_missing_remaining">صور غير متاحة: %d</string>
+    <string name="schedule_gone">لم تعد هذه الرسالة مجدولة. تحقّق من حالتها في المحادثة.</string>
+    <string name="schedule_try_again">تعذّر بدء الإرسال. حاول الإرسال الآن مجددًا أو غيّر موعد الإرسال.</string>
+    <string name="schedule_blocked">هذا الرقم محظور. ألغِ حظره قبل الإرسال.</string>
+    <string name="sms_radio_recovery">الاتصال بالشبكة الخلوية متوقف. تحقّق من وضع الطيران قبل المحاولة مجددًا.</string>
+    <string name="sms_service_recovery">خدمة الهاتف المحمول غير متاحة. حاول مجددًا عند توفر الإشارة.</string>
+    <string name="sms_unknown_recovery">لم تُرسل الرسالة. تحقّق من الرقم ومن تغطية الشبكة ثم حاول مجددًا.</string>
 </resources>
